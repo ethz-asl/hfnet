@@ -22,6 +22,7 @@ class Mobilenetvlad(BaseModel):
             'proj_regularizer': 0.,
             'train_backbone': True,
             'train_vlad': True,
+            'local_descriptor_layer': None,
     }
 
     def _model(self, inputs, mode, **config):
@@ -43,7 +44,11 @@ class Mobilenetvlad(BaseModel):
         descriptor = vlad(feature_map, config, mode == Mode.TRAIN)
         if config['dimensionality_reduction']:
             descriptor = dimensionality_reduction(descriptor, config)
-        return {'descriptor': descriptor}
+
+        ret = {'descriptor': descriptor}
+        if config['local_descriptor_layer']:
+            ret['local_descriptors'] = encoder[config['local_descriptor_layer']]
+        return ret
 
     def _descriptor_l2_error(self, inputs, outputs):
         return tf.reduce_sum(tf.square(inputs['descriptor'] - outputs['descriptor']),

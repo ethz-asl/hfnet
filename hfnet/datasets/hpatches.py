@@ -26,8 +26,7 @@ class Hpatches(BaseDataset):
         image_paths = []
         warped_image_paths = []
         homographies = []
-        scenes = []
-        numbers = []
+        names = []
         for path in scene_paths:
             if config['alteration'] == 'i' and path.stem[0] != 'i':
                 continue
@@ -38,13 +37,11 @@ class Hpatches(BaseDataset):
                 image_paths.append(ref_path)
                 warped_image_paths.append(str(Path(path, str(i) + self.image_ext)))
                 homographies.append(np.loadtxt(str(Path(path, 'H_1_' + str(i)))))
-                scenes.append(path.stem)
-                numbers.append(i)
+                names.append(path.stem + '/' + str(i))
         data = {'image_paths': image_paths,
                 'warped_image_paths': warped_image_paths,
                 'homographies': homographies,
-                'scenes': scenes,
-                'numbers': numbers}
+                'names': names}
 
         if config['truncate']:
             data = {k: v[:config['truncate']] for k, v in data.items()}
@@ -96,11 +93,8 @@ class Hpatches(BaseDataset):
                                                                   tf.uint8))
         warped_images = warped_images.map(_preprocess)
 
-        scenes = tf.data.Dataset.from_tensor_slices(data['scenes'])
-        numbers = tf.data.Dataset.from_tensor_slices(data['numbers'])
+        names = tf.data.Dataset.from_tensor_slices(data['names'])
 
         data = tf.data.Dataset.zip({'image': images, 'warped_image': warped_images,
-                                    'homography': homographies, 'scene': scenes,
-                                    'number': numbers})
-
+                                    'homography': homographies, 'name': names})
         return data
