@@ -1,0 +1,12 @@
+tensorflow-gpu==1.6
+numpy
+scipy
+opencv-python
+tqdm
+pyyaml
+flake8
+jupyter
+matplotlib
+protobuf
+sklearn
+pillow

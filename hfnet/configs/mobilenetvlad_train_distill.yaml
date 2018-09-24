@@ -1,0 +1,26 @@
+data:
+    name: 'descriptor_distillation'
+    image_folders: ['google_landmarks/images']
+    descriptor_folders: ['google_landmarks/descriptors']
+    truncate: 90000
+    preprocessing:
+        resize: [480, 640]
+        grayscale: true
+    validation_size: 192
+    cache_in_memory: true
+model:
+    name: 'mobilenetvlad'
+    image_channels: 1
+    dropout_keep_prob: null
+    intermediate_proj: 0
+    dimensionality_reduction: 4096
+    depth_multiplier: 0.35
+    n_clusters: 32
+    train_backbone: true
+    train_vlad: true
+    batch_size: 16
+    eval_batch_size: 16
+    learning_rate: 0.001
+weights: 'mobilenet_v2_0.35_224/mobilenet_v2_0.35_224.ckpt'
+train_iter: 150000
+validation_interval: 500

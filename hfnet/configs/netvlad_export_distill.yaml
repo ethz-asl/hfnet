@@ -1,0 +1,12 @@
+data:
+    name: 'descriptor_distillation'
+    image_folders: ['google_landmarks/images']
+    load_descriptors: false
+    shuffle: false
+    preprocessing:
+        resize: [480, 640]
+        grayscale: false
+model:
+    name: 'netvlad_original'
+    image_channels: 3
+weights: 'vd16_pitts30k_conv5_3_vlad_preL2_intra_white/vd16_pitts30k_conv5_3_vlad_preL2_intra_white'
