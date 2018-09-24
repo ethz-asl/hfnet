@@ -30,13 +30,14 @@ if __name__ == '__main__':
     if args.as_dataset:
         base_dir = Path(DATA_PATH, export_name)
     else:
-        base_dir = Path(EXPER_PATH, 'exports', export_name)
+        base_dir = Path(EXPER_PATH, 'exports')
+        base_dir = Path(base_dir, ((exper_name+'/') if exper_name else '') + export_name)
     base_dir.mkdir(parents=True, exist_ok=True)
 
     if exper_name:
         with open(Path(EXPER_PATH, exper_name, 'config.yml'), 'r') as f:
             config = tools.dict_update(yaml.load(f), config)
-        checkpoint_path = Path(EXPER_PATH, expert_name)
+        checkpoint_path = Path(EXPER_PATH, exper_name)
         if config.get('weights', None):
             checkpoint_path = Path(checkpoint_path, config['weights'])
     else:
@@ -51,7 +52,6 @@ if __name__ == '__main__':
         dataset = get_dataset(config['data']['name'])(**config['data'])
         test_set = dataset.get_test_set()
 
-        output_dirs = set()
         pbar = tqdm()
         while True:
             try:
@@ -60,16 +60,8 @@ if __name__ == '__main__':
                 break
             descriptor = net.predict(data, keys='descriptor')
 
-            # In the case of nclt, we have different subdirectories, one per sequence
-            output_dir = base_dir
             name = data['name'].decode('utf-8')
-            if '/' in name:
-                output_dir = Path(output_dir, Path(name).parent).as_posix()
-                if output_dir not in output_dirs:
-                    Path(output_dir).mkdir()
-                    output_dirs.add(output_dir)
-                name = Path(name).name
-
-            np.save(Path(output_dir, '{}.npy'.format(name)), descriptor)
+            Path(base_dir, Path(name).parent).mkdir(parents=True, exist_ok=True)
+            np.save(Path(base_dir, '{}.npy'.format(name)), descriptor)
             pbar.update(1)
         pbar.close()
