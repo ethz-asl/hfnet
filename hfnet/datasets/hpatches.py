@@ -11,38 +11,48 @@ class Hpatches(BaseDataset):
     default_config = {
         'alteration': 'all',  # 'all', 'i' for illumination or 'v' for viewpoint
         'truncate': None,
+        'make_pairs': False,
+        'shuffle': False,
+        'random_seed': 0,
         'preprocessing': {
             'resize': [480, 640],
         }
     }
     dataset_folder = 'hpatches'
-    num_images = 5
+    num_images = 6
     image_ext = '.ppm'
 
     def _init_dataset(self, **config):
         base_path = Path(DATA_PATH, self.dataset_folder)
         scene_paths = sorted([x for x in base_path.iterdir() if x.is_dir()])
 
-        image_paths = []
-        warped_image_paths = []
-        homographies = []
-        names = []
+        data = {'image_paths': [], 'names': []}
+        if config['make_pairs']:
+            data = {**data, **{k: [] for k in
+                    ['ref_paths', 'ref_names', 'homographies']}}
         for path in scene_paths:
             if config['alteration'] == 'i' and path.stem[0] != 'i':
                 continue
             if config['alteration'] == 'v' and path.stem[0] != 'v':
                 continue
-            ref_path = str(Path(path, '1' + self.image_ext))
-            for i in range(2, 2 + self.num_images):
-                image_paths.append(ref_path)
-                warped_image_paths.append(str(Path(path, str(i) + self.image_ext)))
-                homographies.append(np.loadtxt(str(Path(path, 'H_1_' + str(i)))))
-                names.append(path.stem + '/' + str(i))
-        data = {'image_paths': image_paths,
-                'warped_image_paths': warped_image_paths,
-                'homographies': homographies,
-                'names': names}
+            for i in range(1, 1 + self.num_images):
+                if config['make_pairs']:
+                    if i == 1:
+                        ref_path = str(Path(path, '1' + self.image_ext))
+                        ref_name = path.stem + '/1'
+                        continue
+                    data['ref_paths'].append(ref_path)
+                    data['ref_names'].append(ref_name)
+                    data['homographies'].append(
+                        np.loadtxt(str(Path(path, 'H_1_' + str(i)))))
+                data['image_paths'].append(
+                    str(Path(path, str(i) + self.image_ext)))
+                data['names'].append(path.stem + '/' + str(i))
 
+        if config['shuffle']:
+            perm = np.random.RandomState(
+                config['random_seed']).permutation(len(data['names']))
+            data = {k: [v[i] for i in perm] for k, v in data.items()}
         if config['truncate']:
             data = {k: v[:config['truncate']] for k, v in data.items()}
         return data
@@ -80,21 +90,29 @@ class Hpatches(BaseDataset):
 
         images = tf.data.Dataset.from_tensor_slices(data['image_paths'])
         images = images.map(lambda path: tf.py_func(_read_image, [path], tf.uint8))
-        homographies = tf.data.Dataset.from_tensor_slices(np.array(data['homographies']))
-        if config['preprocessing']['resize']:
-            homographies = tf.data.Dataset.zip({'image': images,
-                                                'homography': homographies})
-            homographies = homographies.map(_adapt_homography_to_preprocessing)
         images = images.map(_preprocess)
-
-        warped_images = tf.data.Dataset.from_tensor_slices(data['warped_image_paths'])
-        warped_images = warped_images.map(lambda path: tf.py_func(_read_image,
-                                                                  [path],
-                                                                  tf.uint8))
-        warped_images = warped_images.map(_preprocess)
-
         names = tf.data.Dataset.from_tensor_slices(data['names'])
+        dataset = tf.data.Dataset.zip({'image': images, 'name': names})
 
-        data = tf.data.Dataset.zip({'image': images, 'warped_image': warped_images,
-                                    'homography': homographies, 'name': names})
-        return data
+        if config['make_pairs']:
+            homographies = tf.data.Dataset.from_tensor_slices(
+                np.array(data['homographies']))
+            if config['preprocessing']['resize']:
+                homographies = tf.data.Dataset.zip(
+                    {'image': images, 'homography': homographies})
+                homographies = homographies.map(
+                    _adapt_homography_to_preprocessing)
+            images_ref = tf.data.Dataset.from_tensor_slices(data['ref_paths'])
+            images_ref = images_ref.map(
+                lambda path: tf.py_func(_read_image, [path], tf.uint8))
+            images_ref = images_ref.map(_preprocess)
+            names_ref = tf.data.Dataset.from_tensor_slices(data['ref_names'])
+            # dataset = tf.data.Dataset.zip(
+                # {'image_ref': images_ref, 'name_ref': names_ref,
+                 # 'homography': homographies, **dataset})
+            dataset = tf.data.Dataset.zip(
+                (dataset, images_ref, names_ref, homographies)).map(
+                    lambda d, i, n, h: {
+                        'image_ref': i, 'name_ref': n,
+                        'homography': h, **d})
+        return dataset

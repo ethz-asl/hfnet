@@ -45,9 +45,9 @@ class Mobilenetvlad(BaseModel):
         if config['dimensionality_reduction']:
             descriptor = dimensionality_reduction(descriptor, config)
 
-        ret = {'descriptor': descriptor}
+        ret = {'global_descriptor': descriptor}
         if config['local_descriptor_layer']:
-            ret['local_descriptors'] = encoder[config['local_descriptor_layer']]
+            ret['local_descriptor_map'] = encoder[config['local_descriptor_layer']]
         return ret
 
     def _descriptor_l2_error(self, inputs, outputs):
