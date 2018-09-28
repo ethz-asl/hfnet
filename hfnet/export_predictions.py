@@ -18,6 +18,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('config', type=str)
     parser.add_argument('export_name', type=str)
+    parser.add_argument('keys', type=str)
     parser.add_argument('--exper_name', type=str)
     parser.add_argument('--as_dataset', action='store_true')
     args = parser.parse_args()
@@ -26,6 +27,7 @@ if __name__ == '__main__':
     exper_name = args.exper_name
     with open(args.config, 'r') as f:
         config = yaml.load(f)
+    keys = args.keys.split(',')
 
     if args.as_dataset:
         base_dir = Path(DATA_PATH, export_name)
@@ -45,6 +47,7 @@ if __name__ == '__main__':
                 'Experiment name not found, weights must be provided.')
         checkpoint_path = Path(DATA_PATH, 'weights', config['weights'])
 
+
     with get_model(config['model']['name'])(
             data_shape={'image': [None, None, None, config['model']['image_channels']]},
             **config['model']) as net:
@@ -58,10 +61,10 @@ if __name__ == '__main__':
                 data = next(test_set)
             except dataset.end_set:
                 break
-            descriptor = net.predict(data, keys='descriptor')
+            predictions = net.predict(data, keys=keys)
 
             name = data['name'].decode('utf-8')
             Path(base_dir, Path(name).parent).mkdir(parents=True, exist_ok=True)
-            np.save(Path(base_dir, '{}.npy'.format(name)), descriptor)
+            np.savez(Path(base_dir, '{}.npz'.format(name)), **predictions)
             pbar.update(1)
         pbar.close()
