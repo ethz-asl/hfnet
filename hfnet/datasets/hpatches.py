@@ -16,13 +16,16 @@ class Hpatches(BaseDataset):
         'random_seed': 0,
         'preprocessing': {
             'resize': [480, 640],
-        }
+        },
+        'num_parallel_calls': 10,
     }
     dataset_folder = 'hpatches'
     num_images = 6
     image_ext = '.ppm'
 
     def _init_dataset(self, **config):
+        tf.data.Dataset.map_parallel = lambda self, fn: self.map(
+            fn, num_parallel_calls=config['num_parallel_calls'])
         base_path = Path(DATA_PATH, self.dataset_folder)
         scene_paths = sorted([x for x in base_path.iterdir() if x.is_dir()])
 
@@ -61,58 +64,61 @@ class Hpatches(BaseDataset):
         def _read_image(path):
             return cv2.imread(path.decode('utf-8'))
 
-        def _ratio_preserving_resize(image, **config):
-            target_size = tf.convert_to_tensor(config['resize'])
-            scales = tf.to_float(tf.divide(target_size, tf.shape(image)[:2]))
-            new_size = tf.to_float(tf.shape(image)[:2]) * tf.reduce_max(scales)
-            image = tf.image.resize_images(image, tf.to_int32(new_size),
-                                           method=tf.image.ResizeMethod.BILINEAR)
-            return tf.image.resize_image_with_crop_or_pad(image, target_size[0],
-                                                          target_size[1])
+        def _resize_max(image, resize):
+            target_size = tf.to_float(tf.convert_to_tensor(resize))
+            current_size = tf.to_float(tf.shape(image)[:2])
+            scale = tf.reduce_max(target_size) / tf.reduce_max(current_size)
+            new_size = tf.to_int32(current_size * scale)
+            return tf.image.resize_images(
+                image, new_size, method=tf.image.ResizeMethod.BILINEAR)
 
         def _preprocess(image):
             tf.Tensor.set_shape(image, [None, None, 3])
             image = tf.image.rgb_to_grayscale(image)
+            original_size = tf.shape(image)[:2]
             if config['preprocessing']['resize']:
-                image = _ratio_preserving_resize(image, **config['preprocessing'])
-            return tf.to_float(image)
+                image = _resize_max(
+                    image, config['preprocessing']['resize'])
+            return tf.to_float(image), original_size
 
-        def _adapt_homography_to_preprocessing(zip_data):
-            image = zip_data['image']
-            H = tf.cast(zip_data['homography'], tf.float32)
-            target_size = tf.convert_to_tensor(config['preprocessing']['resize'])
-            s = tf.reduce_max(tf.cast(tf.divide(target_size,
-                                                tf.shape(image)[:2]), tf.float32))
-            down_scale = tf.diag(tf.stack([1/s, 1/s, tf.constant(1.)]))
-            up_scale = tf.diag(tf.stack([s, s, tf.constant(1.)]))
-            H = tf.matmul(up_scale, tf.matmul(H, down_scale))
+        def _adapt_homography_to_preprocessing(H, data):
+            image_size = tf.to_float(tf.shape(data['image'])[:2])
+            ref_size = tf.to_float(tf.shape(data['image_ref'])[:2])
+            s = image_size / tf.to_float(data['original_size'])
+            s_ref = ref_size / tf.to_float(data['original_size_ref'])
+            mult = tf.diag(tf.concat([s, [1.]], 0))
+            mult_ref = tf.diag(tf.concat([1/s_ref, [1.]], 0))
+            H = tf.matmul(mult, tf.matmul(tf.to_float(H), mult_ref))
             return H
 
         images = tf.data.Dataset.from_tensor_slices(data['image_paths'])
-        images = images.map(lambda path: tf.py_func(_read_image, [path], tf.uint8))
-        images = images.map(_preprocess)
+        images = images.map_parallel(
+            lambda path: tf.py_func(_read_image, [path], tf.uint8))
+        images = images.map_parallel(_preprocess)
         names = tf.data.Dataset.from_tensor_slices(data['names'])
-        dataset = tf.data.Dataset.zip({'image': images, 'name': names})
+        dataset = tf.data.Dataset.zip(
+            (images, names)).map(lambda i, n: {
+                'image': i[0], 'original_size': i[1], 'name': n})
 
         if config['make_pairs']:
+            images_ref = tf.data.Dataset.from_tensor_slices(data['ref_paths'])
+            images_ref = images_ref.map_parallel(
+                lambda path: tf.py_func(_read_image, [path], tf.uint8))
+            images_ref = images_ref.map_parallel(_preprocess)
+            names_ref = tf.data.Dataset.from_tensor_slices(data['ref_names'])
+            dataset = tf.data.Dataset.zip(
+                (dataset, images_ref, names_ref)).map(
+                    lambda d, i, n: {
+                        'image_ref': i[0], 'name_ref': n,
+                        'original_size_ref': i[1], **d})
+
             homographies = tf.data.Dataset.from_tensor_slices(
                 np.array(data['homographies']))
-            if config['preprocessing']['resize']:
-                homographies = tf.data.Dataset.zip(
-                    {'image': images, 'homography': homographies})
-                homographies = homographies.map(
-                    _adapt_homography_to_preprocessing)
-            images_ref = tf.data.Dataset.from_tensor_slices(data['ref_paths'])
-            images_ref = images_ref.map(
-                lambda path: tf.py_func(_read_image, [path], tf.uint8))
-            images_ref = images_ref.map(_preprocess)
-            names_ref = tf.data.Dataset.from_tensor_slices(data['ref_names'])
-            # dataset = tf.data.Dataset.zip(
-                # {'image_ref': images_ref, 'name_ref': names_ref,
-                 # 'homography': homographies, **dataset})
+            homographies = tf.data.Dataset.zip((homographies, dataset))
+            homographies = homographies.map_parallel(
+                _adapt_homography_to_preprocessing)
             dataset = tf.data.Dataset.zip(
-                (dataset, images_ref, names_ref, homographies)).map(
-                    lambda d, i, n, h: {
-                        'image_ref': i, 'name_ref': n,
-                        'homography': h, **d})
+                (dataset, homographies)).map(
+                    lambda d, h: {'homography': h, **d})
+
         return dataset
