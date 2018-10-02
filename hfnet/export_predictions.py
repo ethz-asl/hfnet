@@ -47,7 +47,6 @@ if __name__ == '__main__':
                 'Experiment name not found, weights must be provided.')
         checkpoint_path = Path(DATA_PATH, 'weights', config['weights'])
 
-
     with get_model(config['model']['name'])(
             data_shape={'image': [None, None, None, config['model']['image_channels']]},
             **config['model']) as net:
@@ -55,16 +54,8 @@ if __name__ == '__main__':
         dataset = get_dataset(config['data']['name'])(**config['data'])
         test_set = dataset.get_test_set()
 
-        pbar = tqdm()
-        while True:
-            try:
-                data = next(test_set)
-            except dataset.end_set:
-                break
+        for data in tqdm(test_set):
             predictions = net.predict(data, keys=keys)
-
             name = data['name'].decode('utf-8')
             Path(base_dir, Path(name).parent).mkdir(parents=True, exist_ok=True)
             np.savez(Path(base_dir, '{}.npz'.format(name)), **predictions)
-            pbar.update(1)
-        pbar.close()

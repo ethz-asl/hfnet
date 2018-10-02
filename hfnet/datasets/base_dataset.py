@@ -103,14 +103,22 @@ class BaseDataset(metaclass=ABCMeta):
         self.split_names = getattr(self, 'split_names', self.default_split_names)
 
         self.tf_splits = {}
+        self.tf_it = {}
         self.tf_next = {}
         with tf.device('/cpu:0'):
             for n in self.split_names:
                 self.tf_splits[n] = self._get_data(self.dataset, n, **self.config)
-                self.tf_next[n] = self.tf_splits[n].make_one_shot_iterator().get_next()
+                prefetched = self.tf_splits[n].prefetch(
+                    self.config.get('prefetch', 1))
+                self.tf_it[n] = prefetched.make_initializable_iterator()
+                self.tf_next[n] = self.tf_it[n].get_next()
         self.end_set = tf.errors.OutOfRangeError
         self.sess = tf.Session()
 
     def _get_set_generator(self, set_name):
+        self.sess.run(self.tf_it[set_name].initializer)
         while True:
-            yield self.sess.run(self.tf_next[set_name])
+            try:
+                yield self.sess.run(self.tf_next[set_name])
+            except self.end_set:
+                return
