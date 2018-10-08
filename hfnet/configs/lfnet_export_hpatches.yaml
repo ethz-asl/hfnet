@@ -1,0 +1,9 @@
+data:
+    name: 'hpatches'
+    alteration: 'all'
+model:
+    name: 'lf_net'
+    top_k: 500
+    nms_ksize: 4
+    image_channels: 1
+weights: 'lf-net/release/models/outdoor/models-latest-42000'
