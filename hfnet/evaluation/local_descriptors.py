@@ -1,49 +1,10 @@
 import numpy as np
 from tqdm import tqdm
 import cv2
-from pathlib import Path
 
-from .utils import matching, keypoints_filter_borders, sample_descriptors
-from .utils import keypoints_warp_2D, keypoints_cv2np, div0, to_homogeneous
-from hfnet.settings import EXPER_PATH
-
-
-def sift_loader(image, name, **config):
-    num_features = config.get('num_features', 0)
-
-    sift = cv2.xfeatures2d.SIFT_create(
-        nfeatures=num_features, contrastThreshold=1e-5)
-    kpts, desc = sift.detectAndCompute(image.astype(np.uint8), None)
-    kpts, scores = keypoints_cv2np(kpts)
-    return {'keypoints': kpts, 'descriptors': desc}
-
-
-def export_loader(image, name, experiment, **config):
-    num_features = config.get('num_features', 0)
-    remove_borders = config.get('remove_borders', 0)
-    keypoint_predictor = config.get('keypoint_predictor', None)
-
-    path = Path(EXPER_PATH, 'exports', experiment, name.decode('utf-8')+'.npz')
-    with np.load(path) as p:
-        pred = {k: v.copy() for k, v in p.items()}
-    if keypoint_predictor:
-        keypoint_config = config.get('keypoint_config', config)
-        keypoint_config['keypoint_predictor'] = None
-        pred_keypoints = keypoint_predictor(
-            image, name, **{'experiment': experiment, **keypoint_config})
-        pred['keypoints'] = pred_keypoints['keypoints']
-    else:
-        assert 'keypoints' in pred
-        pred['keypoints'] = pred['keypoints'][:, ::-1]
-    if remove_borders:
-        pred['keypoints'] = keypoints_filter_borders(
-            pred['keypoints'], image.shape[:2], remove_borders)
-    if num_features:
-        pred['keypoints'] = pred['keypoints'][:num_features]
-    if 'descriptors' not in pred:
-        pred['descriptors'] = sample_descriptors(
-            pred['local_descriptor_map'], pred['keypoints'], image.shape[:2])
-    return pred
+from .shared import compute_pr, compute_average_precision
+from .utils import matching
+from .utils import keypoints_warp_2D, to_homogeneous
 
 
 def compute_homography_correctness(kpts1, kpts2, matches, shape2, H_gt,
@@ -52,7 +13,7 @@ def compute_homography_correctness(kpts1, kpts2, matches, shape2, H_gt,
         return False, None
     kpts1 = kpts1[matches[:, 0]]
     kpts2 = kpts2[matches[:, 1]]
-    H, _ = cv2.findHomography(kpts2, kpts1, cv2.RANSAC, 5.0)
+    H, _ = cv2.findHomography(kpts2, kpts1, cv2.RANSAC, 3.0)
     if H is None:
         return False, None
 
@@ -106,25 +67,8 @@ def compute_tp_fp(kpts1, kpts2, matches, distances, shape1, H_gt,
     return num_gt, tp, fp, distances
 
 
-def compute_pr(tp, distances, num_gt):
-    sort_idx = np.argsort(distances)
-    tp = tp[sort_idx]
-    distances = distances[sort_idx]
-    fp = np.logical_not(tp)
-
-    tp_cum = np.cumsum(tp)
-    fp_cum = np.cumsum(fp)
-    recall = div0(tp_cum, num_gt)
-    precision = div0(tp_cum, tp_cum + fp_cum)
-    precision = np.maximum.accumulate(precision[::-1])[::-1]
-    return precision, recall, distances
-
-
-def compute_average_precision(precision, recall):
-    return np.sum(precision[1:] * (recall[1:] - recall[:-1]))
-
-
 def evaluate(data_iter, config):
+    num_kpts = []
     hcorrectness = []
     matching_scores = []
     inlier_ratios = []
@@ -133,15 +77,18 @@ def evaluate(data_iter, config):
     all_distances = []
 
     for data in tqdm(data_iter):
-        shape1, shape2 = data['image'].shape[:2], data['image_ref'].shape[:2]
+        shape1, shape2 = data['image'].shape[:2], data['image2'].shape[:2]
         pred1 = config['predictor'](
             data['image'], data['name'], **config)
         pred2 = config['predictor'](
-            data['image_ref'], data['name_ref'], **config)
-        all_matches, matches_dist = matching(
+            data['image2'], data['name2'], **config)
+        if len(pred1['keypoints']) == 0 or len(pred2['keypoints']) == 0:
+            hcorrectness.append(0)
+            continue
+        num_kpts.extend([len(pred1['keypoints']), len(pred2['keypoints'])])
+        matches, matches_dist = matching(
             pred1['descriptors'], pred2['descriptors'],
             do_ratio_test=config['do_ratio_test'])
-        matches = all_matches[matches_dist < config['match_thresh']]
 
         hcorrect, dist = compute_homography_correctness(
             pred1['keypoints'], pred2['keypoints'], matches, shape2,
@@ -155,7 +102,7 @@ def evaluate(data_iter, config):
         inlier_ratios.append(inlier_ratio)
 
         num_gt, tp, _, distances = compute_tp_fp(
-            pred1['keypoints'], pred2['keypoints'], all_matches, matches_dist,
+            pred1['keypoints'], pred2['keypoints'], matches, matches_dist,
             shape1, data['homography'], config['correct_match_thresh'])
         all_tp.append(tp)
         all_num_gt += num_gt
@@ -167,6 +114,7 @@ def evaluate(data_iter, config):
     mAP = compute_average_precision(precision, recall)
 
     metrics = {
+        'average_num_keypoints': np.mean(num_kpts),
         'homography_correctness': np.mean(hcorrectness),
         'matching_score': np.mean(matching_scores),
         'inlier_ratio': np.mean(inlier_ratios),

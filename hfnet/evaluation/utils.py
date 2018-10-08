@@ -2,6 +2,43 @@ import numpy as np
 import cv2
 
 
+def nms_fast(kpts, scores, shape, dist_thresh=4):
+    grid = np.zeros(shape, dtype=int)
+    inds = np.zeros(shape, dtype=int)
+
+    inds1 = np.argsort(-scores)  # Sort by confidence
+    kpts_sorted = kpts[inds1]
+    kpts_sorted = kpts_sorted.round().astype(int)  # Rounded corners.
+
+    # Check for edge case of 0 or 1 corners.
+    if kpts_sorted.shape[0] == 0:
+        return np.zeros(0, dtype=int)
+    if kpts_sorted.shape[0] == 1:
+        return np.zeros((1), dtype=int)
+
+    grid[kpts_sorted[:, 1], kpts_sorted[:, 0]] = 1
+    inds[kpts_sorted[:, 1], kpts_sorted[:, 0]] = np.arange(len(kpts_sorted))
+    pad = dist_thresh
+    grid = np.pad(grid, [[pad]*2]*2, mode='constant')
+
+    # Iterate through points, highest to lowest conf, suppress neighborhood.
+    count = 0
+    for i, k in enumerate(kpts_sorted):
+        pt = (k[0]+pad, k[1]+pad)
+        if grid[pt[1], pt[0]] == 1:
+            grid[pt[1]-pad:pt[1]+pad+1, pt[0]-pad:pt[0]+pad+1] = 0
+            grid[pt[1], pt[0]] = -1
+            count += 1
+
+    keepy, keepx = np.where(grid == -1)
+    keepy, keepx = keepy - pad, keepx - pad
+    inds_keep = inds[keepy, keepx]
+    scores_keep = scores[inds1][inds_keep]
+    inds2 = np.argsort(-scores_keep)
+    out_inds = inds1[inds_keep[inds2]]
+    return out_inds
+
+
 def sample_bilinear(data, points):
     # Pad the input data with zeros
     data = np.lib.pad(
@@ -46,7 +83,7 @@ def matching(desc1, desc2, do_ratio_test=False):
             m.distance = m.distance / n.distance
             matches.append(m)
     else:
-        matcher = cv2.BFMatcher(cv2.NORM_L2, crossCheck=False)
+        matcher = cv2.BFMatcher(cv2.NORM_L2, crossCheck=True)
         matches = matcher.match(desc1, desc2)
     return matches_cv2np(matches)
 
@@ -83,12 +120,15 @@ def keypoints_filter_borders(kpts, shape, border):
     good = np.all(np.logical_and(
         kpts < (np.asarray(shape[::-1]) - border),
         kpts >= border), -1)
-    return kpts[good]
+    return good
 
 
 def div0(a, b):
     with np.errstate(divide='ignore', invalid='ignore'):
         c = np.true_divide(a, b)
-        idx = ~np.isfinite(c)
-        c[idx] = np.where(a[idx] == 0, 1, 0)  # -inf inf NaN
+        if np.isscalar(c):
+            c = c if np.isfinite(c) else (1 if a == 0 else 0)
+        else:
+            idx = ~np.isfinite(c)
+            c[idx] = np.where(a[idx] == 0, 1, 0)  # -inf inf NaN
     return c
