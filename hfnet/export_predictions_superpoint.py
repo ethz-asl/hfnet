@@ -176,7 +176,8 @@ class SuperPointFrontend:
         pts[0, :] = ys
         pts[1, :] = xs
         pts[2, :] = heatmap[xs, ys]
-        pts, _ = self.nms_fast(pts, H, W, dist_thresh=self.nms_dist) # Apply NMS.
+        if self.nms_dist:
+            pts, _ = self.nms_fast(pts, H, W, dist_thresh=self.nms_dist) # Apply NMS.
         inds = np.argsort(pts[2,:])
         pts = pts[:,inds[::-1]] # Sort by confidence.
         # Remove points along border.
@@ -185,7 +186,7 @@ class SuperPointFrontend:
         toremoveH = np.logical_or(pts[1, :] < bord, pts[1, :] >= (H-bord))
         toremove = np.logical_or(toremoveW, toremoveH)
         pts = pts[:, ~toremove]
-        ret = {'keypoints': pts[:2][::-1].T.astype(np.int),
+        ret = {'keypoints': pts[:2].T.astype(np.int),
                'local_descriptor_map': np.rollaxis(coarse_desc.detach().cpu().numpy()[0], 0, 3),
                'scores': pts[2]}
         return ret
