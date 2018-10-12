@@ -106,7 +106,7 @@ def to_homogeneous(points):
 
 
 def from_homogeneous(points):
-    return points[:, :2] / points[:, 2:]
+    return points[:, :-1] / points[:, -1:]
 
 
 def keypoints_warp_2D(kpts, H, shape):
@@ -114,6 +114,20 @@ def keypoints_warp_2D(kpts, H, shape):
     visibility = np.all(
         (kpts_w >= 0) & (kpts_w <= (np.array(shape)[::-1]-1)), axis=-1)
     return kpts_w, visibility
+
+
+def keypoints_warp_3D(kpts1, depth1, K1, K2, T_1to2, shape2):
+    kpts1_int = np.round(kpts1).astype(int)
+    depth1_kpts = depth1[kpts1_int[:, 1], kpts1_int[:, 0]]
+    kpts1_3d_1 = np.dot(to_homogeneous(kpts1), np.linalg.inv(K1).T)
+    kpts1_3d_1 = depth1_kpts[:, np.newaxis]*kpts1_3d_1
+    kpts1_3d_2 = from_homogeneous(np.dot(to_homogeneous(kpts1_3d_1), T_1to2.T))
+    kpts1_w = from_homogeneous(np.dot(kpts1_3d_2, K2.T))
+
+    visibility = np.all(
+        (kpts1_w >= 0) & (kpts1_w <= (np.array(shape2)[::-1]-1)), axis=-1)
+    visibility = visibility & (depth1_kpts > 0)
+    return kpts1_w, visibility
 
 
 def keypoints_filter_borders(kpts, shape, border):

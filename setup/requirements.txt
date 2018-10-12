@@ -10,3 +10,4 @@ matplotlib
 protobuf
 sklearn
 pillow
+deepdish
