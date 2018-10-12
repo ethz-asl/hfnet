@@ -170,8 +170,7 @@ class SuperPointFrontend:
         heatmap = np.transpose(heatmap, [0, 2, 1, 3])
         heatmap = np.reshape(heatmap, [Hc*self.cell, Wc*self.cell])
         xs, ys = np.where(heatmap >= self.conf_thresh) # Confidence threshold.
-        if len(xs) == 0:
-            return np.zeros((3, 0)), None, None
+        assert len(xs) != 0
         pts = np.zeros((3, len(xs))) # Populate point data sized 3xN.
         pts[0, :] = ys
         pts[1, :] = xs
@@ -218,8 +217,9 @@ if __name__ == '__main__':
     dataset = get_dataset(config['data']['name'])(**config['data'])
     test_set = dataset.get_test_set()
 
-    for data in tqdm(test_set):
-        predictions = net.run(data['image'])
-        name = data['name'].decode('utf-8')
-        Path(base_dir, Path(name).parent).mkdir(parents=True, exist_ok=True)
-        np.savez(Path(base_dir, '{}.npz'.format(name)), **predictions)
+    with torch.no_grad():
+        for data in tqdm(test_set):
+            predictions = net.run(data['image'])
+            name = data['name'].decode('utf-8')
+            Path(base_dir, Path(name).parent).mkdir(parents=True, exist_ok=True)
+            np.savez(Path(base_dir, '{}.npz'.format(name)), **predictions)
