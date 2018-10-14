@@ -47,7 +47,7 @@ def harris_loader(image, name, **config):
     nms_thresh = config.get('nms_thresh', 4)
 
     detect_map = cv2.cornerHarris(image.astype(np.uint8), 4, 3, 0.04)
-    kpts = np.where(detect_map > 1e-4)
+    kpts = np.where(detect_map > 1e-6)
     scores = detect_map[kpts]
     kpts = np.stack([kpts[1], kpts[0]], axis=-1)
     if do_nms:

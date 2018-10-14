@@ -3,6 +3,6 @@ data:
     alteration: 'all'
 model:
     name: 'mobilenetvlad'
-    local_descriptor_layer: 'layer_7'
+    local_descriptor_layer: 'layer_14'
     image_channels: 1
 weights: null

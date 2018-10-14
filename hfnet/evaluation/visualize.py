@@ -11,7 +11,8 @@ def draw_keypoints(img, kpts, color=(0, 255, 0), radius=4, s=3):
     if img.shape[-1] == 1:
         img = np.repeat(img, 3, -1)
     for k in np.int32(kpts):
-        cv2.circle(img, tuple(s*k), radius, color, thickness=-1)
+        cv2.circle(img, tuple(s*k), radius, color,
+                   thickness=-1, lineType=cv2.LINE_AA)
     return img
 
 

@@ -111,12 +111,12 @@ def from_homogeneous(points):
 
 def keypoints_warp_2D(kpts, H, shape):
     kpts_w = from_homogeneous(np.dot(to_homogeneous(kpts), np.transpose(H)))
-    visibility = np.all(
-        (kpts_w >= 0) & (kpts_w <= (np.array(shape)[::-1]-1)), axis=-1)
-    return kpts_w, visibility
+    vis = np.all((kpts_w >= 0) & (kpts_w <= (np.array(shape)-1)), axis=-1)
+    return kpts_w, vis
 
 
-def keypoints_warp_3D(kpts1, depth1, K1, K2, T_1to2, shape2):
+def keypoints_warp_3D(kpts1, depth1, K1, K2, T_1to2, shape2,
+                      consistency_check=False, depth2=None, thresh=0.1):
     kpts1_int = np.round(kpts1).astype(int)
     depth1_kpts = depth1[kpts1_int[:, 1], kpts1_int[:, 0]]
     kpts1_3d_1 = np.dot(to_homogeneous(kpts1), np.linalg.inv(K1).T)
@@ -124,10 +124,20 @@ def keypoints_warp_3D(kpts1, depth1, K1, K2, T_1to2, shape2):
     kpts1_3d_2 = from_homogeneous(np.dot(to_homogeneous(kpts1_3d_1), T_1to2.T))
     kpts1_w = from_homogeneous(np.dot(kpts1_3d_2, K2.T))
 
-    visibility = np.all(
-        (kpts1_w >= 0) & (kpts1_w <= (np.array(shape2)[::-1]-1)), axis=-1)
-    visibility = visibility & (depth1_kpts > 0)
-    return kpts1_w, visibility
+    vis = np.all((kpts1_w >= 0) & (kpts1_w <= (np.array(shape2)-1)), axis=-1)
+    vis &= (depth1_kpts > 0)  # visible in SfM
+    vis &= (kpts1_3d_2[:, -1] > 0)  # point in front of the camera
+
+    if consistency_check:
+        assert depth2 is not None
+        kpts1_w_int = np.round(kpts1_w[vis]).astype(int)
+        depth2_kpts = depth2[kpts1_w_int[:, 1], kpts1_w_int[:, 0]]
+        kpt1_w_z = kpts1_3d_2[vis, -1]
+        # Consistency of the two depth values for each point
+        error = np.abs(kpt1_w_z - depth2_kpts) / np.maximum(depth2_kpts, 1e-4)
+        vis[vis] &= (error < thresh) & (depth2_kpts > 0)
+
+    return kpts1_w, vis, kpts1_3d_1
 
 
 def keypoints_filter_borders(kpts, shape, border):

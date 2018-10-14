@@ -1,0 +1,13 @@
+data:
+    name: 'colmap'
+    sequences: [
+        'british_museum', 'florence_cathedral_side',
+        'lincoln_memorial_statue', 'london_bridge',
+        'milan_cathedral', 'mount_rushmore',
+        'piazza_san_marco', 'reichstag', 'sagrada_familia',
+        'st_pauls_cathedral', 'united_states_capitol']
+model:
+    name: 'mobilenetvlad'
+    local_descriptor_layer: 'layer_7'
+    image_channels: 1
+weights: null
