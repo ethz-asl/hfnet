@@ -70,6 +70,7 @@ def export_loader(image, name, experiment, **config):
     do_nms = config.get('do_nms', False)
     nms_thresh = config.get('nms_thresh', 4)
     keypoint_refinement = config.get('keypoint_refinement', False)
+    binarize = config.get('binarize', False)
     entries = ['keypoints', 'scores', 'descriptors']
 
     path = Path(EXPER_PATH, 'exports', experiment, name.decode('utf-8')+'.npz')
@@ -107,4 +108,6 @@ def export_loader(image, name, experiment, **config):
     if 'descriptors' not in pred:
         pred['descriptors'] = sample_descriptors(
             pred['local_descriptor_map'], pred['keypoints'], image.shape[:2])
+    if binarize:
+        pred['descriptors'] = pred['descriptors'] > 0
     return pred

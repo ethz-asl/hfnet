@@ -75,15 +75,21 @@ def sample_descriptors(descriptor_map, keypoints, image_size):
 
 
 def matching(desc1, desc2, do_ratio_test=False, cross_check=True):
-    desc1, desc2 = np.float32(desc1), np.float32(desc2)
+    if desc1.dtype == np.bool and desc2.dtype == np.bool:
+        desc1, desc2 = np.packbits(desc1, axis=1), np.packbits(desc2, axis=1)
+        norm = cv2.NORM_HAMMING
+    else:
+        desc1, desc2 = np.float32(desc1), np.float32(desc2)
+        norm = cv2.NORM_L2
+
     if do_ratio_test:
         matches = []
-        matcher = cv2.BFMatcher(cv2.NORM_L2)
+        matcher = cv2.BFMatcher(norm)
         for m, n in matcher.knnMatch(desc1, desc2, k=2):
             m.distance = m.distance / n.distance
             matches.append(m)
     else:
-        matcher = cv2.BFMatcher(cv2.NORM_L2, crossCheck=cross_check)
+        matcher = cv2.BFMatcher(norm, crossCheck=cross_check)
         matches = matcher.match(desc1, desc2)
     return matches_cv2np(matches)
 
