@@ -74,7 +74,7 @@ def sample_descriptors(descriptor_map, keypoints, image_size):
     return desc
 
 
-def matching(desc1, desc2, do_ratio_test=False):
+def matching(desc1, desc2, do_ratio_test=False, cross_check=True):
     desc1, desc2 = np.float32(desc1), np.float32(desc2)
     if do_ratio_test:
         matches = []
@@ -83,7 +83,7 @@ def matching(desc1, desc2, do_ratio_test=False):
             m.distance = m.distance / n.distance
             matches.append(m)
     else:
-        matcher = cv2.BFMatcher(cv2.NORM_L2, crossCheck=True)
+        matcher = cv2.BFMatcher(cv2.NORM_L2, crossCheck=cross_check)
         matches = matcher.match(desc1, desc2)
     return matches_cv2np(matches)
 
@@ -145,6 +145,11 @@ def keypoints_filter_borders(kpts, shape, border):
         kpts < (np.asarray(shape[::-1]) - border),
         kpts >= border), -1)
     return good
+
+
+def angle_error(R1, R2):
+    cos = (np.trace(np.dot(np.linalg.inv(R1), R2)) - 1) / 2
+    return np.rad2deg(np.abs(np.arccos(cos)))
 
 
 def div0(a, b):

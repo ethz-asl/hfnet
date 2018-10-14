@@ -11,6 +11,7 @@ def sift_loader(image, name, **config):
     num_features = config.get('num_features', 0)
     do_nms = config.get('do_nms', False)
     nms_thresh = config.get('nms_thresh', 4)
+    do_root = config.get('root', False)
 
     sift = cv2.xfeatures2d.SIFT_create(contrastThreshold=1e-5)
     kpts, desc = sift.detectAndCompute(image.astype(np.uint8), None)
@@ -21,6 +22,9 @@ def sift_loader(image, name, **config):
     if num_features:
         keep_indices = np.argsort(scores)[::-1][:num_features]
         kpts, desc, scores = [i[keep_indices] for i in [kpts, desc, scores]]
+    if do_root:
+        desc /= np.sum(desc, axis=-1, keepdims=True)
+        desc = np.sqrt(desc)
     return {'keypoints': kpts, 'descriptors': desc, 'scores': scores}
 
 
