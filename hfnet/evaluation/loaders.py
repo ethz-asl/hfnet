@@ -69,6 +69,7 @@ def export_loader(image, name, experiment, **config):
     keypoint_predictor = config.get('keypoint_predictor', None)
     do_nms = config.get('do_nms', False)
     nms_thresh = config.get('nms_thresh', 4)
+    keypoint_refinement = config.get('keypoint_refinement', False)
     entries = ['keypoints', 'scores', 'descriptors']
 
     path = Path(EXPER_PATH, 'exports', experiment, name.decode('utf-8')+'.npz')
@@ -93,6 +94,12 @@ def export_loader(image, name, experiment, **config):
                 pred['keypoints'], pred['scores'], image.shape[:2], nms_thresh)
             pred = {**pred,
                     **{k: v[keep] for k, v in pred.items() if k in entries}}
+        if keypoint_refinement:
+            criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER,
+                        30, 0.001)
+            pred['keypoints'] = cv2.cornerSubPix(
+                image, np.float32(pred['keypoints']),
+                (3, 3), (-1, -1), criteria)
     if num_features:
         keep = np.argsort(pred['scores'])[::-1][:num_features]
         pred = {**pred,
