@@ -35,8 +35,8 @@ class Colmap(BaseDataset):
         sequences = config['sequences']
         if not isinstance(sequences, (list, tuple)):
             sequences = [sequences]
-        sequences = set([p.stem for s in sequences for p in base_path.glob(s)
-                         if p.is_dir()])
+        sequences = sorted(set([p.stem for s in sequences
+                                for p in base_path.glob(s) if p.is_dir()]))
 
         data = {k: [] for k in ['image', 'name', 'depth', 'K']}
         if config['make_pairs']:

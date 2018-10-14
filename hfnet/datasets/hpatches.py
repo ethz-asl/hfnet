@@ -15,7 +15,7 @@ class Hpatches(BaseDataset):
         'shuffle': False,
         'random_seed': 0,
         'preprocessing': {
-            'resize': [480, 640],
+            'resize_max': 640,
         },
         'num_parallel_calls': 10,
     }
@@ -66,7 +66,7 @@ class Hpatches(BaseDataset):
         def _resize_max(image, resize):
             target_size = tf.to_float(tf.convert_to_tensor(resize))
             current_size = tf.to_float(tf.shape(image)[:2])
-            scale = tf.reduce_max(target_size) / tf.reduce_max(current_size)
+            scale = target_size / tf.reduce_max(current_size)
             new_size = tf.to_int32(current_size * scale)
             return tf.image.resize_images(
                 image, new_size, method=tf.image.ResizeMethod.BILINEAR)
@@ -75,9 +75,9 @@ class Hpatches(BaseDataset):
             tf.Tensor.set_shape(image, [None, None, 3])
             image = tf.image.rgb_to_grayscale(image)
             original_size = tf.shape(image)[:2]
-            if config['preprocessing']['resize']:
+            if config['preprocessing']['resize_max']:
                 image = _resize_max(
-                    image, config['preprocessing']['resize'])
+                    image, config['preprocessing']['resize_max'])
             return tf.to_float(image), original_size
 
         def _adapt_homography_to_preprocessing(H, data):
