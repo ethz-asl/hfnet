@@ -1,16 +1,24 @@
 import numpy as np
 import os
+import cv2
 
-def export_features_from_npz(path_file, out_path):
+def export_features_from_npz(filename, in_path, out_path):
+    path_file = os.path.join(in_path, filename)
     frame1 = np.load(path_file)
 
     filename = os.path.splitext(os.path.basename(path_file))[0]
+
+    img_file = os.path.join(out_path, filename) + '.jpg'
+    img = cv2.imread(img_file, 0)
+    original_height, original_width = img.shape
+
     out_path_and_name = os.path.join(out_path, filename) + '.jpg.txt'
     print out_path_and_name
     outfile = open(out_path_and_name, "w+")
 
     current_width = frame1['image_size'][0]
-    original_width = 1600
+    current_height = frame1['image_size'][1]
+
     scaling = float(original_width) / current_width
 
     SIFT_SIZE = 128
@@ -19,6 +27,7 @@ def export_features_from_npz(path_file, out_path):
 
     for keypoint in kp1:
         outfile.write(str(keypoint[0]) + ' ' + str(keypoint[1]) + ' 1 1 ')
+        assert (keypoint[0] <= original_width)
         for x in range(0, SIFT_SIZE):
             outfile.write(str(x) + ' ')
         outfile.write('\n')
@@ -30,7 +39,7 @@ def export_feature_detections():
     in_path = 'db'
     for filename in os.listdir(in_path):
         if filename.endswith(".npz"):
-             export_features_from_npz(os.path.join(in_path, filename), out_path)
+             export_features_from_npz(filename, in_path, out_path)
 
 if __name__ == "__main__":
     export_feature_detections()

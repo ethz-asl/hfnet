@@ -8,7 +8,7 @@ import match_frames
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--database_path", required=True)
-    parser.add_argument("--min_num_matches", type=int, default=15)
+    parser.add_argument("--min_num_matches", type=int, default=10)
     # This argument lets us only look at the matches from a certain folder.
     parser.add_argument("--filter_image_dir", default="")
     args = parser.parse_args()
@@ -30,7 +30,7 @@ def main():
         frame1 = os.path.splitext(matching_pair[0].encode('utf-8'))[0]+'.npz'
         frame2 = os.path.splitext(matching_pair[1].encode('utf-8'))[0]+'.npz'
 
-        num_points = 500
+        num_points = 2000
         keypoint_matches = match_frames.match_frames(frame1, frame2,
                                   'images_upright/' + matching_pair[0],
                                   'images_upright/' + matching_pair[1],

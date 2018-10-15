@@ -55,7 +55,7 @@ def match_frames(path_frame1, path_frame2, path_image1, path_image2, num_points,
         # Ratio test as per Lowe's paper.
         matchesMask = [[0,0] for i in xrange(len(matches))]
         for i,(m,n) in enumerate(matches):
-            if m.distance < 0.8*n.distance:
+            if m.distance < 0.85*n.distance:
                 matchesMask[i]=[1,0]
     else:
         matcher = cv2.BFMatcher(cv2.NORM_L2, crossCheck=True)
@@ -70,8 +70,14 @@ def match_frames(path_frame1, path_frame2, path_image1, path_image2, num_points,
         img1 = cv2.imread(path_image1, 0)
         img2 = cv2.imread(path_image2, 0)
 
-        original_width = np.size(img1, 1)
         current_width = frame1['image_size'][0]
+        current_height = frame1['image_size'][1]
+
+        if (current_width > current_height):
+            original_width = 1600
+        else:
+            original_width = 1063
+
         scaling = float(original_width) / current_width
 
         kp1 = frame1['keypoints'][:num_points,:] * scaling
