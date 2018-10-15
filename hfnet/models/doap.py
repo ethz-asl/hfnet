@@ -9,6 +9,13 @@ from .base_model import BaseModel
 from hfnet.settings import DATA_PATH
 
 
+def normalize(image):
+    image = image - tf.reduce_mean(image, axis=(1, 2, 3), keepdims=True)
+    var = tf.reduce_mean(tf.square(image), axis=(1, 2, 3), keepdims=True)
+    image = image / tf.sqrt(var)
+    return image
+
+
 class Doap(BaseModel):
     input_spec = {
             'image': {'shape': [None, None, None, 1], 'type': tf.float32},
@@ -29,7 +36,7 @@ class Doap(BaseModel):
         layers = net.layers
 
         tf_layers = {}
-        image = inputs['image']
+        image = normalize(inputs['image'])
         if config['use_transformer']:
             tf_layers['input'] = image
             start = 0
@@ -43,11 +50,11 @@ class Doap(BaseModel):
             logging.info(f'Reading layer {layer.name}')
 
             if layer.type == 'dagnn.Conv':
+                shape = layer.block.size
+                k1, k2, c_in, c_out = shape
                 w, b = layer.params  # weight, bias
                 w, b = params[w], params[b]
-                if len(w.shape) == 3:
-                    w = w[:, :, np.newaxis]
-                k1, k2, c_in, c_out = w.shape
+                w = w.reshape(shape)
                 assert c_out == b.shape[0]
 
                 stride = layer.block.stride

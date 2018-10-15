@@ -15,6 +15,7 @@ class NetvladOriginal(BaseModel):
     default_config = {
             'num_clusters': 64,
             'pca_dimension': 4096,
+            'local_descriptor_layer': None,
     }
 
     def _model(self, inputs, mode, **config):
@@ -32,6 +33,7 @@ class NetvladOriginal(BaseModel):
             # Subtract trained average image.
             average_rgb = tf.get_variable('average_rgb', 3, dtype=image_batch.dtype)
             x = x - average_rgb
+            endpoints = {}
 
             # VGG16
             def vggConv(inputs, numbers, out_dim, with_relu):
@@ -44,29 +46,34 @@ class NetvladOriginal(BaseModel):
 
             x = vggConv(x, '1_1', 64, True)
             x = vggConv(x, '1_2', 64, False)
+            endpoints['conv1_2'] = x
             x = vggPool(x)
             x = tf.nn.relu(x)
 
             x = vggConv(x, '2_1', 128, True)
             x = vggConv(x, '2_2', 128, False)
+            endpoints['conv2_2'] = x
             x = vggPool(x)
             x = tf.nn.relu(x)
 
             x = vggConv(x, '3_1', 256, True)
             x = vggConv(x, '3_2', 256, True)
             x = vggConv(x, '3_3', 256, False)
+            endpoints['conv3_3'] = x
             x = vggPool(x)
             x = tf.nn.relu(x)
 
             x = vggConv(x, '4_1', 512, True)
             x = vggConv(x, '4_2', 512, True)
             x = vggConv(x, '4_3', 512, False)
+            endpoints['conv4_3'] = x
             x = vggPool(x)
             x = tf.nn.relu(x)
 
             x = vggConv(x, '5_1', 512, True)
             x = vggConv(x, '5_2', 512, True)
             x = vggConv(x, '5_3', 512, False)
+            endpoints['conv5_3'] = x
 
             # NetVLAD
             x = tf.nn.l2_normalize(x, dim=-1)
@@ -77,7 +84,12 @@ class NetvladOriginal(BaseModel):
                                  config['pca_dimension'], 1, 1, name='WPCA')
             x = tf.nn.l2_normalize(tf.layers.flatten(x), dim=-1)
 
-        return {'descriptor': x}
+        ret = {'descriptor': x}
+        if config['local_descriptor_layer']:
+            desc = tf.nn.l2_normalize(
+                endpoints[config['local_descriptor_layer']], axis=-1)
+            ret['local_descriptor_map'] = desc
+        return ret
 
     def _loss(self, outputs, inputs, **config):
         raise NotImplementedError
