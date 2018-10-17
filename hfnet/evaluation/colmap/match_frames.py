@@ -55,7 +55,7 @@ def match_frames(path_frame1, path_frame2, path_image1, path_image2, num_points,
         # Ratio test as per Lowe's paper.
         matchesMask = [[0,0] for i in xrange(len(matches))]
         for i,(m,n) in enumerate(matches):
-            if m.distance < 0.85*n.distance:
+            if m.distance < 0.80*n.distance:
                 matchesMask[i]=[1,0]
     else:
         matcher = cv2.BFMatcher(cv2.NORM_L2, crossCheck=True)
