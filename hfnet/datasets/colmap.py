@@ -14,13 +14,13 @@ class Colmap(BaseDataset):
     default_config = {
         'truncate': None,
         'sequences': '*',
-        'depth_factor': 1.0,
         'make_pairs': False,
         'pair_thresh': 0.2,
         'max_num_pairs': 200,
         'shuffle': False,
         'random_seed': 0,
         'preprocessing': {'resize_max': 640},
+        'scale_file': 'scales.txt',
         'num_parallel_calls': 10,
     }
     dataset_folder = 'colmap'
@@ -38,10 +38,21 @@ class Colmap(BaseDataset):
         sequences = sorted(set([p.stem for s in sequences
                                 for p in base_path.glob(s) if p.is_dir()]))
 
-        data = {k: [] for k in ['image', 'name', 'depth', 'K']}
+        # Read scale file
+        scales = {}
+        scale_file = config['scale_file']
+        if scale_file and Path(base_path, scale_file).exists():
+            with open(Path(base_path, scale_file).as_posix(), 'r') as f:
+                for line in f.readlines():
+                    seq, scale = line.split()
+                    scales[seq] = float(scale)
+
+        data = {k: [] for k in ['image', 'name', 'depth', 'K', 'scale']}
         if config['make_pairs']:
             data = {**data, **{k: [] for k in
                     ['image2', 'name2', 'depth2', 'K2', '1_T_2']}}
+        else:
+            data = {**data, 'w_T_i': []}
 
         for seq in sequences:
             seq_path = Path(base_path, seq)
@@ -49,9 +60,11 @@ class Colmap(BaseDataset):
                 path=Path(seq_path, 'dense/sparse').as_posix(), ext='.bin')
             image_dir = Path(seq_path, 'dense/images')
             depth_dir = Path(seq_path, 'dense/stereo/'+self.depth_dir)
+            scale = scales.get(seq, 1.0)
 
             # Gather all image info
-            data_all = {k: [] for k in ['image', 'name', 'depth', 'K', 'pose']}
+            data_all = {k: [] for k in ['image', 'name', 'depth',
+                                        'K', 'w_T_i', 'scale']}
             id_mapping = {}
             for i, (id, info) in enumerate(images.items()):
                 id_mapping[id] = i
@@ -60,13 +73,14 @@ class Colmap(BaseDataset):
                 K = np.array([[K[0], 0, K[2]], [0, K[1], K[3]], [0, 0, 1]])
                 T = np.eye(4)
                 T[:3, :3] = qvec2rotmat(info.qvec)
-                T[:3, 3] = info.tvec
+                T[:3, 3] = info.tvec*scale
 
                 data_all['name'].append(seq+'/'+name)
                 data_all['image'].append(str(Path(image_dir, info.name)))
                 data_all['depth'].append(str(Path(depth_dir, name+'.h5')))
                 data_all['K'].append(K)
-                data_all['pose'].append(T)
+                data_all['w_T_i'].append(T)
+                data_all['scale'].append(scale)
 
             if config['make_pairs']:
                 pair_file = next(Path(seq_path, 'dense/stereo').glob('pairs*'))
@@ -91,10 +105,11 @@ class Colmap(BaseDataset):
                     for k in ['image', 'name', 'depth', 'K']:
                         data[k].append(data_all[k][id_mapping[idx1]])
                         data[k+'2'].append(data_all[k][id_mapping[idx2]])
-                    T_wto1 = data_all['pose'][id_mapping[idx1]]
-                    T_wto2 = data_all['pose'][id_mapping[idx2]]
+                    T_wto1 = data_all['w_T_i'][id_mapping[idx1]]
+                    T_wto2 = data_all['w_T_i'][id_mapping[idx2]]
                     T_2to1 = np.dot(T_wto1, np.linalg.inv(T_wto2))
                     data['1_T_2'].append(T_2to1)
+                    data['scale'].append(scale)
                 logging.info('Colmap sequence {} contains {} pairs'.format(
                     seq, len(good_pairs)))
             else:
@@ -117,10 +132,10 @@ class Colmap(BaseDataset):
             image = tf.image.decode_png(image, channels=3)
             return image
 
-        def _py_read_depth(path):
+        def _py_read_depth(path, scale):
             with h5py.File(path.decode('utf-8'), 'r') as f:
                 depth = f['depth'].value
-            return (depth*config['depth_factor']).astype(np.float32)
+            return (depth*scale).astype(np.float32)
 
         def _resize_max(image, resize):
             target_size = tf.to_float(tf.convert_to_tensor(resize))
@@ -155,8 +170,9 @@ class Colmap(BaseDataset):
             images = tf.data.Dataset.from_tensor_slices(data['image'])
             images = images.map_parallel(_read_image)
             depth = tf.data.Dataset.from_tensor_slices(data['depth'])
-            depth = depth.map_parallel(
-                lambda path: tf.py_func(_py_read_depth, [path], tf.float32))
+            scales = tf.data.Dataset.from_tensor_slices(data['scale'])
+            depth = tf.data.Dataset.zip((depth, scales)).map_parallel(
+                lambda d, s: tf.py_func(_py_read_depth, [d, s], tf.float32))
             intrinsics = tf.data.Dataset.from_tensor_slices(
                 np.array(data['K'], dtype=np.float32))
             names = tf.data.Dataset.from_tensor_slices(data['name'])
@@ -171,6 +187,7 @@ class Colmap(BaseDataset):
         if config['make_pairs']:
             entries = ['image', 'depth', 'K', 'name']
             data2 = {k: data[k+'2'] for k in entries}
+            data2['scale'] = data['scale']
             dataset2 = _parse(data2)
             dataset2 = dataset2.map(lambda d: {k+'2': d[k] for k in entries})
             T = tf.data.Dataset.from_tensor_slices(
