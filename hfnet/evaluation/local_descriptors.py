@@ -7,15 +7,14 @@ from .utils import matching, angle_error
 from .utils import keypoints_warp_2D, keypoints_warp_3D, to_homogeneous
 
 
-def compute_homography_correctness(kpts1, kpts2, matches, shape2, H_gt,
-                                   dist_thresh=3):
+def compute_homography_error(kpts1, kpts2, matches, shape2, H_gt):
     if matches.shape[0] == 0:
         return False, None
     kpts1 = kpts1[matches[:, 0]]
     kpts2 = kpts2[matches[:, 1]]
     H, _ = cv2.findHomography(kpts2, kpts1, cv2.RANSAC, 3.0)
     if H is None:
-        return False, None
+        return None
 
     w, h = shape2
     corners2 = to_homogeneous(
@@ -25,15 +24,14 @@ def compute_homography_correctness(kpts1, kpts2, matches, shape2, H_gt,
     corners1 = np.dot(corners2, np.transpose(H))
     corners1 = corners1[:, :2] / corners1[:, 2:]
     mean_dist = np.mean(np.linalg.norm(corners1 - corners1_gt, axis=1))
-    correct = (mean_dist <= dist_thresh)
-    return correct, mean_dist
+    return mean_dist
 
 
-def compute_pose_correctness(kpts1, kpts2_3d_2, matches, vis1, vis2, T_2to1,
-                             K1, trans_thresh, rot_thresh, reproj_thresh):
+def compute_pose_error(kpts1, kpts2_3d_2, matches, vis1, vis2, T_2to1, K1,
+                       reproj_thresh):
     valid = vis1[matches[:, 0]] & vis2[matches[:, 1]]
     matches = matches[valid]
-    failure = (False, None, None)
+    failure = (None, None)
 
     if len(matches) < 4:
         return failure
@@ -51,8 +49,7 @@ def compute_pose_correctness(kpts1, kpts2_3d_2, matches, vis1, vis2, T_2to1,
 
     error_t = np.linalg.norm(t - T_2to1[:3, 3])
     error_R = angle_error(R, T_2to1[:3, :3])
-    correct = (error_t < trans_thresh) & (error_R < rot_thresh)
-    return correct, error_t, error_R
+    return error_t, error_R
 
 
 def compute_matching_score(kpts1, kpts2, kpts1_w, kpts2_w, matches1, matches2,
@@ -85,15 +82,26 @@ def compute_tp_fp(kpts1_w, kpts2, vis1, matches, distances, dist_thresh=3):
     return num_gt, tp, fp, distances
 
 
+def compute_pose_recall(errors, num_queries):
+    sort_idx = np.argsort(errors)
+    errors = errors[sort_idx]
+    recall = (np.arange(len(errors)) + 1) / num_queries
+    errors = np.concatenate([[0], errors])
+    recall = np.concatenate([[0], recall])
+    return errors, recall
+
+
 def evaluate(data_iter, config, is_2d=True):
+    iterations = 0
     num_kpts = []
-    correctness = []
+    pose_errors = []
     matching_scores = []
     all_tp = []
     all_num_gt = 0
     all_distances = []
 
     for data in tqdm(data_iter):
+        iterations += 1
         shape1 = data['image'].shape[:2][::-1]
         shape2 = data['image2'].shape[:2][::-1]
         pred1 = config['predictor'](
@@ -103,7 +111,6 @@ def evaluate(data_iter, config, is_2d=True):
 
         num_kpts.extend([len(pred1['keypoints']), len(pred2['keypoints'])])
         if len(pred1['keypoints']) == 0 or len(pred2['keypoints']) == 0:
-            correctness.append(0)
             continue
         matches1, dist1 = matching(
             pred1['descriptors'], pred2['descriptors'],
@@ -119,9 +126,10 @@ def evaluate(data_iter, config, is_2d=True):
             kpts2_w, vis2 = keypoints_warp_2D(
                 pred2['keypoints'], H, shape1)
 
-            correct, _ = compute_homography_correctness(
+            error_H = compute_homography_error(
                 pred1['keypoints'], pred2['keypoints'], matches1, shape2,
-                data['homography'], config['correct_match_thresh'])
+                data['homography'])
+            error = {'homography': error_H}
         else:
             kpts1_w, vis1, kpts1_3d_1 = keypoints_warp_3D(
                 pred1['keypoints'], data['depth'], data['K'],
@@ -132,12 +140,12 @@ def evaluate(data_iter, config, is_2d=True):
                 data['K'], data['1_T_2'], shape1,
                 depth2=data['depth'], consistency_check=True)
 
-            correct, _, _ = compute_pose_correctness(
+            error_t, error_R = compute_pose_error(
                 pred1['keypoints'], kpts2_3d_2, matches1, vis1, vis2,
-                data['1_T_2'], data['K'], config['correct_trans_thresh'],
-                config['correct_rot_thresh'], config['correct_match_thresh'])
+                data['1_T_2'], data['K'], config['correct_match_thresh'])
+            error = {'translation': error_t, 'rotation': error_R}
 
-        correctness.append(correct)
+        pose_errors.append(error)
 
         matching_score = compute_matching_score(
             pred1['keypoints'], pred2['keypoints'], kpts1_w, kpts2_w,
@@ -156,10 +164,14 @@ def evaluate(data_iter, config, is_2d=True):
         all_num_gt)
     mAP = compute_average_precision(precision, recall)
 
+    pose_errors = {k: np.array([e[k] for e in pose_errors if e[k] is not None])
+                   for k in pose_errors[0]}
+    pose_recalls = {k: compute_pose_recall(v, iterations)
+                    for k, v in pose_errors.items()}
+
     metrics = {
         'average_num_keypoints': np.mean(num_kpts),
-        'correctness': np.mean(correctness),
         'matching_score': np.mean(matching_scores),
         'mAP': mAP,
     }
-    return metrics, precision, recall, distances
+    return metrics, precision, recall, distances, pose_recalls
