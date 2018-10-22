@@ -2,9 +2,11 @@ import numpy as np
 import os
 import sqlite3
 
-def db_image_name_dict():
+import nvm_to_colmap_helper
+
+def db_image_name_dict(db_file):
     # CHANGE DATABASE PATH HERE!
-    connection = sqlite3.connect('test2.db')
+    connection = sqlite3.connect(db_file)
     cursor = connection.cursor()
 
     # Get a mapping between image ids and image names
@@ -17,63 +19,10 @@ def db_image_name_dict():
         name = row[1]
         name_to_image_id[name] = image_id
 
-    print max(image_ids)
-
     return name_to_image_id
 
-def quat2mat(q):
-    ''' Calculate rotation matrix corresponding to quaternion
-
-    Parameters
-    ----------
-    q : 4 element array-like
-
-    Returns
-    -------
-    M : (3,3) array
-      Rotation matrix corresponding to input quaternion *q*
-
-    Notes
-    -----
-    Rotation matrix applies to column vectors, and is applied to the
-    left of coordinate vectors.  The algorithm here allows non-unit
-    quaternions.
-
-    References
-    ----------
-    Algorithm from
-    http://en.wikipedia.org/wiki/Rotation_matrix#Quaternion
-
-    Examples
-    --------
-    >>> import numpy as np
-    >>> M = quat2mat([1, 0, 0, 0]) # Identity quaternion
-    >>> np.allclose(M, np.eye(3))
-    True
-    >>> M = quat2mat([0, 1, 0, 0]) # 180 degree rotn around axis 0
-    >>> np.allclose(M, np.diag([1, -1, -1]))
-    True
-    '''
-    w, x, y, z = q
-    Nq = w*w + x*x + y*y + z*z
-    if Nq < 0.00001:
-        return np.eye(3)
-    s = 2.0/Nq
-    X = x*s
-    Y = y*s
-    Z = z*s
-    wX = w*X; wY = w*Y; wZ = w*Z
-    xX = x*X; xY = x*Y; xZ = x*Z
-    yY = y*Y; yZ = y*Z; zZ = z*Z
-    return np.array(
-           [[ 1.0-(yY+zZ), xY-wZ, xZ+wY ],
-            [ xY+wZ, 1.0-(xX+zZ), yZ-wX ],
-            [ xZ-wY, yZ+wX, 1.0-(xX+yY) ]])
-
-
-
-def export_cameras():
-    connection = sqlite3.connect('test2.db')
+def export_cameras(db_file):
+    connection = sqlite3.connect(db_file)
     cursor = connection.cursor()
 
     outfile = open("cameras.txt", "w")
@@ -91,6 +40,10 @@ def export_cameras():
     cameras = {}
     cursor.execute("SELECT camera_id, model, width, height, params FROM cameras;")
     for row in cursor:
+        if row[1] != 2:
+            # Wrong model, skip this camera.
+            continue
+
         camera_id = row[0]
         assert(row[1] == 2)
         model = 'SIMPLE_RADIAL'
@@ -107,46 +60,44 @@ def export_cameras():
     outfile.close()
 
 
-def process(data, name_to_image_id,outfile):
+def process(nvm_data, name_to_image_id,outfile):
     # colmap format
     #   IMAGE_ID, QW, QX, QY, QZ, TX, TY, TZ, CAMERA_ID, NAME
 
-    #print data[2], data[3], data[4], data[5]
-    #print data[6], data[7], data[8]
-    image_id = name_to_image_id[os.path.basename(data[0])]
+    # nvm format
+    # q -> data[2], data[3], data[4], data[5]
+    # p -> data[6], data[7], data[8]
+    #assert(os.path.basename(nvm_data[0]) in name_to_image_id), os.path.basename(nvm_data[0])
+    #image_id = name_to_image_id[os.path.basename(nvm_data[0])]
+
+    assert(nvm_data[0] in name_to_image_id), nvm_data[0]
+    image_id = name_to_image_id[nvm_data[0]]
+
     assert (image_id > 0)
-    print data[0], image_id
+    print nvm_data[0], image_id
 
-    test = str(data[2] + ' ' + data[3] + ' ' + data[4] + ' ' + data[5])
-    q = np.fromstring(test, dtype=float, sep=' ')
-    v = np.array([float(data[6]), float(data[7]), float(data[8])]).transpose()
+    q_nvm_str = str(nvm_data[2] + ' ' + nvm_data[3] + ' ' + nvm_data[4] + ' ' + nvm_data[5])
+    q_nvm = np.fromstring(q_nvm_str, dtype=float, sep=' ')
+    p_nvm = np.array([float(nvm_data[6]), float(nvm_data[7]), float(nvm_data[8])])
 
-    R = quat2mat(q);
-
-    print R, R.transpose()
-
-    tvec = v #R.dot(-v)
-
-    print tvec
+    p_colmap = nvm_to_colmap_helper.convert_nvm_pose_to_colmap_p(q_nvm, p_nvm)
 
     outfile.write(str(image_id))
-    outfile.write(' %s %s %s %s %f %f %f ' %(data[2],data[3],data[4],data[5],tvec[0],tvec[1],tvec[2]))
+    outfile.write(' %s %s %s %s %f %f %f ' %(nvm_data[2],nvm_data[3], \
+        nvm_data[4],nvm_data[5],p_colmap[0],p_colmap[1],p_colmap[2]))
     outfile.write(str(image_id) + ' ')
-    outfile.write(os.path.basename(data[0]) + '\n\n')
-
-    # outfile.write(str(0))
-    # outfile.write(' %s %s %s %s %s %s %s ' %(data[2],data[3],data[4],data[5],data[6],data[7],data[8]))
-    # outfile.write(str(0) + ' ')
-    # outfile.write(os.path.basename(data[0]) + '\n\n')
-    # exit(0)
+    #outfile.write(os.path.basename(nvm_data[0]) + '\n\n')
+    outfile.write(nvm_data[0] + '\n\n')
 
 
 def main():
+  db_file = 'aachen.db'
+
   print 'Reading DB'
-  name_to_image_id = db_image_name_dict()
+  name_to_image_id = db_image_name_dict(db_file)
 
   print 'Exporting cameras'
-  export_cameras()
+  export_cameras(db_file)
 
   print 'Reading NVM'
   with open('aachen_cvpr2018_db.nvm') as f:
