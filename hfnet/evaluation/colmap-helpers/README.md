@@ -13,20 +13,23 @@ python colmap-helpers/features_from_npz.py --npz_dir db --image_dir images_uprig
 ### Feature matching ###
 Then, we need to match features across the frames. To speed up this process, we can use the original db file (e.g. using SIFT) to only match the pairs of frames that were matching well with original features.
 ```
-python colmap-helpers/match_features_with_db_prior.py --database_file <db_file> --filter_image_dir <>
+python colmap-helpers/match_features_with_db_prior.py --database_file <db_file> --image_prefix db --image_dir <folder_with_images> --output_file <output_file> --min_num_matches=<min_num_matches_in_db> --num_points_per_frame=<points_per_frame>
 ```
 example:
 ```
-
+python colmap-helpers/match_features_with_db_prior.py --database_file aachen.db --image_prefix db --image_dir images_upright --output_file matches.txt --min_num_matches=500 --num_points_per_frame=200
 ```
+You can also use ``--debug`` flag for additional debugging.
 
 ### Generating the Colmap db file ###
 Next, we need to generate the new Colmap db file with our features and matches:
 ```
-blah
+colmap database_creator --database_path database.db
+colmap feature_importer --database_path database.db --image_path images_upright/ --import_path images_upright/
+colmap matches_importer --database_path database.db --match_list_path matches.txt --match_type raw
 ```
 
-### Using ###
+### Using prior image poses ###
 We could now run the sparse reconstruction of Colmap, but we would actually like to reuse the ground-truth database frame poses from the original poses. We therefore provide a script that
 
 

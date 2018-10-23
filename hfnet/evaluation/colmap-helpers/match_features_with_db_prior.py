@@ -56,8 +56,7 @@ def main():
                                                        args.use_ratio_test,
                                                        args.debug)
 
-        outfile.write(os.path.basename(matching_pair[0]) + ' ' \
-                      + os.path.basename(matching_pair[1]) + '\n')
+        outfile.write(matching_pair[0] + ' ' + matching_pair[1] + '\n')
         for match in keypoint_matches:
             outfile.write(str(match[0]) + ' ' + str(match[1]) + '\n')
 

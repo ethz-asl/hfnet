@@ -58,7 +58,8 @@ def debug_matching(frame1, frame2, path_image1, path_image2, matches,
     else:
         draw_params = dict(matchColor = (0,255,0),
         singlePointColor = (255,0,0), flags = 0)
-        img = cv2.drawMatches(img1, cvkp1, img2, cvkp2, matches, None, **draw_params)
+        img = cv2.drawMatches(img1, cvkp1, img2, cvkp2, matches, None,
+                              **draw_params)
 
     img_sift = baseline_sift_matching(img1, img2)
 
