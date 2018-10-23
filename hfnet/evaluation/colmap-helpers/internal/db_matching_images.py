@@ -28,19 +28,20 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 # Author: Johannes L. Schoenberger (jsch-at-demuc-dot-de)
-#
-# Modified by: Autonomous Systems Lab, ETH Zurich.
+
 
 import sqlite3
 import numpy as np
+
 
 def pair_id_to_image_ids(pair_id):
     image_id2 = pair_id % 2147483647
     image_id1 = (pair_id - image_id2) / 2147483647
     return image_id1, image_id2
 
-def get_matching_images(database_path, min_num_matches, filter_image_dir):
-    connection = sqlite3.connect(database_path)
+
+def get_matching_images(database_file, min_num_matches, filter_image_dir):
+    connection = sqlite3.connect(database_file)
     cursor = connection.cursor()
 
     images = {}
@@ -48,7 +49,6 @@ def get_matching_images(database_path, min_num_matches, filter_image_dir):
     for row in cursor:
         image_id = row[0]
         image_name = row[2]
-
         images[image_id] = image_name
 
     matching_image_pairs = []

@@ -1,8 +1,9 @@
+import argparse
 import numpy as np
 import os
 import sqlite3
 
-import nvm_to_colmap_helper
+from internal import nvm_to_colmap_helper
 
 def db_image_name_dict(db_file):
     # CHANGE DATABASE PATH HERE!
@@ -20,6 +21,7 @@ def db_image_name_dict(db_file):
         name_to_image_id[name] = image_id
 
     return name_to_image_id
+
 
 def export_cameras(db_file):
     connection = sqlite3.connect(db_file)
@@ -121,6 +123,7 @@ def main():
       line_num += 1
 
     outfile.close()
+
 
 if __name__ == "__main__":
     main()

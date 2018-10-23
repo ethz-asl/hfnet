@@ -1,5 +1,6 @@
 import numpy as np
 
+
 # Code from http://nipy.org/nibabel/reference/nibabel.quaternions.html
 def quat2mat(q):
     w, x, y, z = q

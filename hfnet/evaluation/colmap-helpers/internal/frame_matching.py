@@ -2,12 +2,6 @@ import cv2
 import numpy as np
 from matplotlib import pyplot as plt
 
-def get_ocv_kpts_from_np(numpy_keypoints):
-    ocv_keypoints = []
-    for keypoint in numpy_keypoints:
-      ocv_keypoints.append(cv2.KeyPoint(x=keypoint[0], y=keypoint[1], _size=1))
-
-    return ocv_keypoints
 
 def baseline_sift_matching(img1, img2):
     # Initiate SIFT detector
@@ -36,9 +30,55 @@ def baseline_sift_matching(img1, img2):
     plt.show()
 
 
-def match_frames(path_frame1, path_frame2, path_image1, path_image2, num_points, debug=False):
-    frame1 = np.load(path_frame1)
-    frame2 = np.load(path_frame2)
+def debug_matching():
+    img1 = cv2.imread(path_image1, 0)
+    img2 = cv2.imread(path_image2, 0)
+
+    current_width = frame1['image_size'][0]
+    current_height = frame1['image_size'][1]
+
+    if (current_width > current_height):
+        original_width = 1600
+    else:
+        original_width = 1063
+
+        scaling = float(original_width) / current_width
+
+        kp1 = frame1['keypoints'][:num_points,:] * scaling
+        kp2 = frame2['keypoints'][:num_points,:] * scaling
+
+        cvkp1 = get_ocv_kpts_from_np(kp1)
+        cvkp2 = get_ocv_kpts_from_np(kp2)
+
+        if RATIO_TEST:
+            draw_params = dict(matchColor = (0,255,0),
+            singlePointColor = (255,0,0),
+            matchesMask = matchesMask, flags = 0)
+            img = cv2.drawMatchesKnn(img1, cvkp1, img2, cvkp2, matches, None,
+            **draw_params)
+        else:
+            draw_params = dict(matchColor = (0,255,0),
+            singlePointColor = (255,0,0), flags = 0)
+            img = cv2.drawMatches(img1, cvkp1, img2, cvkp2, matches, None, **draw_params)
+            plt.imshow(img)
+            plt.show()
+
+            # Switch on to compare to SIFT.
+            # baseline_sift_matching(img1, img2)
+
+
+def get_ocv_kpts_from_np(numpy_keypoints):
+    ocv_keypoints = []
+    for keypoint in numpy_keypoints:
+      ocv_keypoints.append(cv2.KeyPoint(x=keypoint[0], y=keypoint[1], _size=1))
+
+    return ocv_keypoints
+
+
+def match_frames(path_npz1, path_npz2, path_image1, path_image2, num_points,
+                 debug):
+    frame1 = np.load(path_npz1)
+    frame2 = np.load(path_npz2)
 
     # Assert the keypoints are sorted according to the score.
     assert(np.sort(frame1['scores']).all() == frame1['scores'].all())
@@ -67,39 +107,7 @@ def match_frames(path_frame1, path_frame2, path_image1, path_image2, num_points,
         keypoint_matches.append((match[0].queryIdx, match[0].trainIdx))
 
     if debug:
-        img1 = cv2.imread(path_image1, 0)
-        img2 = cv2.imread(path_image2, 0)
+        debug_matching()
 
-        current_width = frame1['image_size'][0]
-        current_height = frame1['image_size'][1]
-
-        if (current_width > current_height):
-            original_width = 1600
-        else:
-            original_width = 1063
-
-        scaling = float(original_width) / current_width
-
-        kp1 = frame1['keypoints'][:num_points,:] * scaling
-        kp2 = frame2['keypoints'][:num_points,:] * scaling
-
-        cvkp1 = get_ocv_kpts_from_np(kp1)
-        cvkp2 = get_ocv_kpts_from_np(kp2)
-
-        if RATIO_TEST:
-            draw_params = dict(matchColor = (0,255,0),
-                               singlePointColor = (255,0,0),
-                               matchesMask = matchesMask, flags = 0)
-            img = cv2.drawMatchesKnn(img1, cvkp1, img2, cvkp2, matches, None,
-                                     **draw_params)
-        else:
-            draw_params = dict(matchColor = (0,255,0),
-                               singlePointColor = (255,0,0), flags = 0)
-            img = cv2.drawMatches(img1, cvkp1, img2, cvkp2, matches, None, **draw_params)
-        plt.imshow(img)
-        plt.show()
-
-        # Switch on to compare to SIFT.
-        # baseline_sift_matching(img1, img2)
 
     return keypoint_matches
