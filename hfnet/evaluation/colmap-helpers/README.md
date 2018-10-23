@@ -19,7 +19,7 @@ python colmap-helpers/match_features_with_db_prior.py --database_file <db_file> 
 ```
 example:
 ```
-python colmap-helpers/match_features_with_db_prior.py --database_file aachen.db --image_prefix db --image_dir images_upright --output_file matches.txt --min_num_matches=500 --num_points_per_frame=200
+python colmap-helpers/match_features_with_db_prior.py --database_file aachen.db --image_prefix db --image_dir images_upright --output_file matches.txt --min_num_matches=15 --num_points_per_frame=2000
 ```
 You can also use ``--debug`` flag for additional debugging.
 
