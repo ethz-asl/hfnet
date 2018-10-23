@@ -1,5 +1,6 @@
 ## Building a Colmap model using custom features and matches ##
 
+
 ### Feature detection and extraction ###
 If you decide to use custom features, we first generate the feature detection/extraction files (one per image) from NPZ Numpy files using the following script:
 ```
@@ -9,6 +10,7 @@ example:
 ```
 python colmap-helpers/features_from_npz.py --npz_dir db --image_dir images_upright/db/
 ```
+
 
 ### Feature matching ###
 Then, we need to match features across the frames. To speed up this process, we can use the original db file (e.g. using SIFT) to only match the pairs of frames that were matching well with original features.
@@ -21,6 +23,7 @@ python colmap-helpers/match_features_with_db_prior.py --database_file aachen.db 
 ```
 You can also use ``--debug`` flag for additional debugging.
 
+
 ### Generating the Colmap db file ###
 Next, we need to generate the new Colmap db file with our features and matches:
 ```
@@ -28,6 +31,7 @@ colmap database_creator --database_path database.db
 colmap feature_importer --database_path database.db --image_path images_upright/ --import_path images_upright/
 colmap matches_importer --database_path database.db --match_list_path matches.txt --match_type raw
 ```
+
 
 ### Using prior image poses ###
 We could now run the sparse reconstruction of Colmap, but we would actually like to reuse the ground-truth database frame poses from the original poses. We therefore provide a script that reads an existing ground-truth NVM model and uses the camera poses to triangulate the 3D points according to custom matches as imported above.
