@@ -64,7 +64,6 @@ def get_matching_images(database_file, min_num_matches, filter_image_dir):
         image_name2 = images[image_id2]
 
         if image_name1.startswith(filter_image_dir) and image_name2.startswith(filter_image_dir):
-            print 'Found pair: ', image_name1 + ' ' + image_name2
             matching_image_pairs.append((image_name1, image_name2))
 
     cursor.close()

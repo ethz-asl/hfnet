@@ -26,45 +26,50 @@ def baseline_sift_matching(img1, img2):
                        singlePointColor = (255,0,0),
                        matchesMask = None, flags = 0)
     img3 = cv2.drawMatchesKnn(img1,kp1,img2,kp2,good, None,**draw_params)
-    plt.imshow(img3)
-    plt.show()
+    return img3
 
 
-def debug_matching():
+def debug_matching(frame1, frame2, path_image1, path_image2, matches,
+                   matches_mask, num_points, use_ratio_test):
     img1 = cv2.imread(path_image1, 0)
     img2 = cv2.imread(path_image2, 0)
 
-    current_width = frame1['image_size'][0]
-    current_height = frame1['image_size'][1]
+    current_width1 = frame1['image_size'][0]
+    current_width2 = frame2['image_size'][0]
 
-    if (current_width > current_height):
-        original_width = 1600
+    original_width1 = img1.shape[1]
+    original_width2 = img2.shape[1]
+
+    scaling1 = float(original_width1) / current_width1
+    scaling2 = float(original_width2) / current_width2
+
+    kp1 = frame1['keypoints'][:num_points,:] * scaling1
+    kp2 = frame2['keypoints'][:num_points,:] * scaling2
+
+    cvkp1 = get_ocv_kpts_from_np(kp1)
+    cvkp2 = get_ocv_kpts_from_np(kp2)
+
+    if use_ratio_test:
+        draw_params = dict(matchColor = (0,255,0),
+        singlePointColor = (255,0,0),
+        matchesMask = matches_mask, flags = 0)
+        img = cv2.drawMatchesKnn(img1, cvkp1, img2, cvkp2, matches, None,
+        **draw_params)
     else:
-        original_width = 1063
+        draw_params = dict(matchColor = (0,255,0),
+        singlePointColor = (255,0,0), flags = 0)
+        img = cv2.drawMatches(img1, cvkp1, img2, cvkp2, matches, None, **draw_params)
 
-        scaling = float(original_width) / current_width
+    img_sift = baseline_sift_matching(img1, img2)
 
-        kp1 = frame1['keypoints'][:num_points,:] * scaling
-        kp2 = frame2['keypoints'][:num_points,:] * scaling
-
-        cvkp1 = get_ocv_kpts_from_np(kp1)
-        cvkp2 = get_ocv_kpts_from_np(kp2)
-
-        if RATIO_TEST:
-            draw_params = dict(matchColor = (0,255,0),
-            singlePointColor = (255,0,0),
-            matchesMask = matchesMask, flags = 0)
-            img = cv2.drawMatchesKnn(img1, cvkp1, img2, cvkp2, matches, None,
-            **draw_params)
-        else:
-            draw_params = dict(matchColor = (0,255,0),
-            singlePointColor = (255,0,0), flags = 0)
-            img = cv2.drawMatches(img1, cvkp1, img2, cvkp2, matches, None, **draw_params)
-            plt.imshow(img)
-            plt.show()
-
-            # Switch on to compare to SIFT.
-            # baseline_sift_matching(img1, img2)
+    fig = plt.figure(figsize=(2, 1))
+    fig.add_subplot(2, 1, 1)
+    plt.imshow(img)
+    plt.title('Custom features')
+    fig.add_subplot(2, 1, 2)
+    plt.imshow(img_sift)
+    plt.title('SIFT')
+    plt.show()
 
 
 def get_ocv_kpts_from_np(numpy_keypoints):
@@ -76,38 +81,42 @@ def get_ocv_kpts_from_np(numpy_keypoints):
 
 
 def match_frames(path_npz1, path_npz2, path_image1, path_image2, num_points,
-                 debug):
+                 use_ratio_test, debug):
     frame1 = np.load(path_npz1)
     frame2 = np.load(path_npz2)
 
     # Assert the keypoints are sorted according to the score.
-    assert(np.sort(frame1['scores']).all() == frame1['scores'].all())
+    assert np.all(np.sort(frame1['scores'])[::-1] == frame1['scores'])
 
     # WARNING: scores are not taken into account as of now.
     des1 = frame1['descriptors'].astype('float32')[:num_points,:]
     des2 = frame2['descriptors'].astype('float32')[:num_points,:]
 
-    RATIO_TEST = True
-    if RATIO_TEST:
+    keypoint_matches = []
+    if use_ratio_test:
         matcher = cv2.BFMatcher(cv2.NORM_L2)
         matches = matcher.knnMatch(des1, des2, k=2)
 
+        for match in matches:
+            # match.trainIdx belongs to des2.
+            keypoint_matches.append((match[0].queryIdx, match[0].trainIdx))
+
         # Ratio test as per Lowe's paper.
-        matchesMask = [[0,0] for i in xrange(len(matches))]
+        matches_mask = [[0,0] for i in xrange(len(matches))]
         for i,(m,n) in enumerate(matches):
             if m.distance < 0.80*n.distance:
-                matchesMask[i]=[1,0]
+                matches_mask[i] = [1,0]
     else:
+        matches_mask = []
         matcher = cv2.BFMatcher(cv2.NORM_L2, crossCheck=True)
         matches = matcher.match(des1, des2)
 
-    keypoint_matches = []
-    for match in matches:
-        # match.trainIdx belongs to des2.
-        keypoint_matches.append((match[0].queryIdx, match[0].trainIdx))
+        for match in matches:
+            # match.trainIdx belongs to des2.
+            keypoint_matches.append((match.queryIdx, match.trainIdx))
 
     if debug:
-        debug_matching()
-
+        debug_matching(frame1, frame2, path_image1, path_image2, matches,
+                       matches_mask, num_points, use_ratio_test)
 
     return keypoint_matches
