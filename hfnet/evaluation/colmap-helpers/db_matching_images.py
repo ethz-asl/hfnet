@@ -28,6 +28,8 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 # Author: Johannes L. Schoenberger (jsch-at-demuc-dot-de)
+#
+# Modified by: Autonomous Systems Lab, ETH Zurich.
 
 import sqlite3
 import numpy as np
