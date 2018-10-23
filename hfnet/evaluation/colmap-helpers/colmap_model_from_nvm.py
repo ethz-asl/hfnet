@@ -5,6 +5,16 @@ import sqlite3
 
 from internal import nvm_to_colmap_helper
 
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--database_file", required=True)
+    parser.add_argument("--nvm_file", required=True)
+    parser.add_argument("--output_dir", required=True)
+    args = parser.parse_args()
+    return args
+
+
 def db_image_name_dict(db_file):
     # CHANGE DATABASE PATH HERE!
     connection = sqlite3.connect(db_file)
@@ -23,11 +33,11 @@ def db_image_name_dict(db_file):
     return name_to_image_id
 
 
-def export_cameras(db_file):
+def export_cameras(db_file, output_dir):
     connection = sqlite3.connect(db_file)
     cursor = connection.cursor()
 
-    outfile = open("cameras.txt", "w")
+    outfile = open(os.path.join(output_dir, "cameras.txt"), "w")
 
     # In db file:
     # model INTEGER NOT NULL,
@@ -53,7 +63,6 @@ def export_cameras(db_file):
         height = row[3]
         params = np.fromstring(row[4], dtype=np.double)
         cameras[camera_id] = params
-        print camera_id, model, params
         outfile.write('%d %s %f %f ' %(camera_id, model, width, height))
         for x in params:
             outfile.write(str(x) + ' ')
@@ -69,14 +78,11 @@ def process(nvm_data, name_to_image_id,outfile):
     # nvm format
     # q -> data[2], data[3], data[4], data[5]
     # p -> data[6], data[7], data[8]
-    #assert(os.path.basename(nvm_data[0]) in name_to_image_id), os.path.basename(nvm_data[0])
-    #image_id = name_to_image_id[os.path.basename(nvm_data[0])]
 
     assert(nvm_data[0] in name_to_image_id), nvm_data[0]
     image_id = name_to_image_id[nvm_data[0]]
 
     assert (image_id > 0)
-    print nvm_data[0], image_id
 
     q_nvm_str = str(nvm_data[2] + ' ' + nvm_data[3] + ' ' + nvm_data[4] + ' ' + nvm_data[5])
     q_nvm = np.fromstring(q_nvm_str, dtype=float, sep=' ')
@@ -88,30 +94,32 @@ def process(nvm_data, name_to_image_id,outfile):
     outfile.write(' %s %s %s %s %f %f %f ' %(nvm_data[2],nvm_data[3], \
         nvm_data[4],nvm_data[5],p_colmap[0],p_colmap[1],p_colmap[2]))
     outfile.write(str(image_id) + ' ')
-    #outfile.write(os.path.basename(nvm_data[0]) + '\n\n')
     outfile.write(nvm_data[0] + '\n\n')
 
 
 def main():
-  db_file = 'aachen.db'
+  args = parse_args()
 
   print 'Reading DB'
-  name_to_image_id = db_image_name_dict(db_file)
+  name_to_image_id = db_image_name_dict(args.database_file)
 
   print 'Exporting cameras'
-  export_cameras(db_file)
+  export_cameras(args.database_file, args.output_dir)
+
+  print 'Creating empty Points3D file'
+  open(os.path.join(args.output_dir, 'points3D.txt'), 'w+').close()
 
   print 'Reading NVM'
-  with open('aachen_cvpr2018_db.nvm') as f:
+  with open(args.nvm_file) as f:
     line_num = 0
     total_num_images = 0
     num_images = 0
 
-    outfile = open("images.txt", "w")
+    outfile = open(os.path.join(args.output_dir, "images.txt"), "w")
 
     for line in f:
       if line_num == 0 or line_num == 1:
-          print 'Header, skip'
+          pass
       elif line_num == 2:
            total_num_images = int(line)
       else:
@@ -119,10 +127,12 @@ def main():
           process(data, name_to_image_id, outfile)
           num_images += 1
           if (num_images == total_num_images):
-            return
+            break
       line_num += 1
 
     outfile.close()
+
+  print 'Done'
 
 
 if __name__ == "__main__":

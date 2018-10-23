@@ -30,7 +30,14 @@ colmap matches_importer --database_path database.db --match_list_path matches.tx
 ```
 
 ### Using prior image poses ###
-We could now run the sparse reconstruction of Colmap, but we would actually like to reuse the ground-truth database frame poses from the original poses. We therefore provide a script that
+We could now run the sparse reconstruction of Colmap, but we would actually like to reuse the ground-truth database frame poses from the original poses. We therefore provide a script that reads an existing ground-truth NVM model and uses the camera poses to triangulate the 3D points according to custom matches as imported above.
+```
+python colmap-helpers/colmap_model_from_nvm.py --database_file <db_file> --nvm_file <nvm_file> --output_dir <model_output_directory>
+```
+example:
+```
+python colmap-helpers/colmap_model_from_nvm.py --database_file aachen.db --nvm_file aachen_cvpr2018_db.nvm --output_dir new_model/
+```
 
 
 ### Model triangulation ###
