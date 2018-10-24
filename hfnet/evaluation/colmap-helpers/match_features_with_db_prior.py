@@ -9,7 +9,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--database_file", required=True)
     parser.add_argument("--min_num_matches", type=int, default=15)
-    parser.add_argument("--num_points_per_frame", type=int, default=1500)
+    parser.add_argument("--num_points_per_frame", type=int, default=2500)
     parser.add_argument("--image_dir", required=True)
 
     # This argument lets us only look at the matches from a certain folder.

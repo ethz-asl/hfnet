@@ -29,10 +29,7 @@ def export_features_from_npz(filename, in_path, out_path):
     print out_path_and_name
     outfile = open(out_path_and_name, "w+")
 
-    current_width = frame1['image_size'][0]
-    current_height = frame1['image_size'][1]
-
-    scaling = float(original_width) / current_width
+    scaling = np.array(img.shape)[::-1] / np.array(frame1['image_size']).astype(np.float)
 
     SIFT_SIZE = 128
     # Scale the keypoints according to the scaling factor.

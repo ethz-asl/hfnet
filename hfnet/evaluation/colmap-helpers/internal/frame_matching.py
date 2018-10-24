@@ -34,14 +34,8 @@ def debug_matching(frame1, frame2, path_image1, path_image2, matches,
     img1 = cv2.imread(path_image1, 0)
     img2 = cv2.imread(path_image2, 0)
 
-    current_width1 = frame1['image_size'][0]
-    current_width2 = frame2['image_size'][0]
-
-    original_width1 = img1.shape[1]
-    original_width2 = img2.shape[1]
-
-    scaling1 = float(original_width1) / current_width1
-    scaling2 = float(original_width2) / current_width2
+    scaling1 = np.array(img1.shape)[::-1] / np.array(frame1['image_size']).astype(np.float)
+    scaling2 = np.array(img2.shape)[::-1] / np.array(frame2['image_size']).astype(np.float)
 
     kp1 = frame1['keypoints'][:num_points,:] * scaling1
     kp2 = frame2['keypoints'][:num_points,:] * scaling2
@@ -98,20 +92,18 @@ def match_frames(path_npz1, path_npz2, path_image1, path_image2, num_points,
         matcher = cv2.BFMatcher(cv2.NORM_L2)
         matches = matcher.knnMatch(des1, des2, k=2)
 
-        for match in matches:
-            # match.trainIdx belongs to des2.
-            keypoint_matches.append((match[0].queryIdx, match[0].trainIdx))
-
         # Ratio test as per Lowe's paper.
         matches_mask = [[0,0] for i in xrange(len(matches))]
         for i,(m,n) in enumerate(matches):
-            if m.distance < 0.80*n.distance:
+            if m.distance < 0.85*n.distance:
                 matches_mask[i] = [1,0]
+                keypoint_matches.append((m.queryIdx, m.trainIdx))
     else:
         matches_mask = []
         matcher = cv2.BFMatcher(cv2.NORM_L2, crossCheck=True)
         matches = matcher.match(des1, des2)
 
+        # Matches are already cross-checked.
         for match in matches:
             # match.trainIdx belongs to des2.
             keypoint_matches.append((match.queryIdx, match.trainIdx))
