@@ -11,6 +11,7 @@ def parse_args():
     parser.add_argument("--min_num_matches", type=int, default=15)
     parser.add_argument("--num_points_per_frame", type=int, default=2500)
     parser.add_argument("--image_dir", required=True)
+    parser.add_argument("--npz_dir", required=True)
 
     # This argument lets us only look at the matches from a certain folder.
     # We want to avoid adding matches from other folders, e.g. query. This
@@ -39,8 +40,8 @@ def main():
     matched = 0
     for matching_pair in matching_image_pairs:
         # Get npz instead of image files.
-        npz1 = os.path.splitext(matching_pair[0].encode('utf-8'))[0]+'.npz'
-        npz2 = os.path.splitext(matching_pair[1].encode('utf-8'))[0]+'.npz'
+        npz1 = os.path.join(args.npz_dir, os.path.splitext(os.path.basename(matching_pair[0].encode('utf-8')))[0] + '.npz')
+        npz2 = os.path.join(args.npz_dir, os.path.splitext(os.path.basename(matching_pair[1].encode('utf-8')))[0] + '.npz')
 
         image1 = os.path.join(args.image_dir, matching_pair[0])
         image2 = os.path.join(args.image_dir, matching_pair[1])

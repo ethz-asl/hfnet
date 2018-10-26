@@ -26,7 +26,7 @@ def export_features_from_npz(filename, in_path, out_path):
     original_height, original_width = img.shape
 
     out_path_and_name = os.path.join(out_path, filename) + '.jpg.txt'
-    print out_path_and_name
+    print path_file, '->', out_path_and_name
     outfile = open(out_path_and_name, "w+")
 
     scaling = np.array(img.shape)[::-1] / np.array(frame1['image_size']).astype(np.float)
