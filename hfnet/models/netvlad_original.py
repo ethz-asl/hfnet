@@ -84,7 +84,7 @@ class NetvladOriginal(BaseModel):
                                  config['pca_dimension'], 1, 1, name='WPCA')
             x = tf.nn.l2_normalize(tf.layers.flatten(x), dim=-1)
 
-        ret = {'descriptor': x}
+        ret = {'global_descriptor': x}
         if config['local_descriptor_layer']:
             desc = tf.nn.l2_normalize(
                 endpoints[config['local_descriptor_layer']], axis=-1)

@@ -146,6 +146,7 @@ class SuperPoint(BaseModel):
                            tf.constant(config['keep_top_k']))
             scores, indices = tf.nn.top_k(scores, k)
             keypoints = tf.to_int32(tf.gather(tf.to_float(keypoints), indices))
+        keypoints = keypoints[:, ::-1]  # x-y convention
         results['keypoints'] = tf.expand_dims(keypoints, 0)
         results['scores'] = tf.expand_dims(scores, 0)
         results['local_descriptor_map'] = results['descriptors']

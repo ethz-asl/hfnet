@@ -56,6 +56,7 @@ if __name__ == '__main__':
 
         for data in tqdm(test_set):
             predictions = net.predict(data, keys=keys)
+            predictions['input_shape'] = data['image'].shape
             name = data['name'].decode('utf-8')
             Path(base_dir, Path(name).parent).mkdir(parents=True, exist_ok=True)
             np.savez(Path(base_dir, '{}.npz'.format(name)), **predictions)
