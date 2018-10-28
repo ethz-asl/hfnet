@@ -9,6 +9,7 @@ class Aachen(BaseDataset):
     default_config = {
         'load_db': True,
         'load_queries': True,
+        'image_names': None,
         'resize_max': 640,
         'num_parallel_calls': 10,
     }
@@ -19,19 +20,22 @@ class Aachen(BaseDataset):
             fn, num_parallel_calls=config['num_parallel_calls'])
         base_path = Path(DATA_PATH, self.dataset_folder)
 
-        search = []
-        if config['load_db']:
-            search.append(Path(base_path, 'db'))
-        if config['load_queries']:
-            search.append(Path(base_path, 'query'))
-        assert len(search) != 0
+        if config['image_names'] is not None:
+            paths = [Path(base_path, n) for n in config['image_names']]
+        else:
+            search = []
+            if config['load_db']:
+                search.append(Path(base_path, 'db'))
+            if config['load_queries']:
+                search.append(Path(base_path, 'query'))
+            assert len(search) != 0
+            paths = [p for s in search for p in s.glob('**/*.jpg')]
 
         data = {'image': [], 'name': []}
-        for s in search:
-            for p in s.glob('**/*.jpg'):
-                data['image'].append(p.as_posix())
-                rel = p.relative_to(base_path)
-                data['name'].append(Path(rel.parent, rel.stem).as_posix())
+        for p in paths:
+            data['image'].append(p.as_posix())
+            rel = p.relative_to(base_path)
+            data['name'].append(Path(rel.parent, rel.stem).as_posix())
         return data
 
     def _get_data(self, data, split_name, **config):
@@ -48,16 +52,20 @@ class Aachen(BaseDataset):
             return tf.image.resize_images(
                 image, new_size, method=tf.image.ResizeMethod.BILINEAR)
 
-        def _preprocess(image):
+        def _preprocess(data):
+            image = data['image']
+            original_size = tf.shape(image)
             tf.Tensor.set_shape(image, [None, None, 3])
             image = tf.image.rgb_to_grayscale(image)
             if config['resize_max']:
                 image = _resize_max(image, config['resize_max'])
-            return tf.to_float(image)
+            data['image'] = image
+            data['original_size'] = original_size
+            return data
 
         images = tf.data.Dataset.from_tensor_slices(data['image'])
         images = images.map_parallel(_read_image)
-        images = images.map_parallel(_preprocess)
         names = tf.data.Dataset.from_tensor_slices(data['name'])
         dataset = tf.data.Dataset.zip({'image': images, 'name': names})
+        dataset = dataset.map_parallel(_preprocess)
         return dataset
