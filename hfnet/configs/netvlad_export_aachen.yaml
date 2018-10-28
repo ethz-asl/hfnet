@@ -1,0 +1,10 @@
+data:
+    name: 'aachen'
+    load_db: true
+    load_queries: true
+    resize_max: 960
+model:
+    name: 'netvlad_original'
+    local_descriptor_layer: 'conv3_3'
+    image_channels: 1
+weights: 'vd16_pitts30k_conv5_3_vlad_preL2_intra_white/vd16_pitts30k_conv5_3_vlad_preL2_intra_white'
