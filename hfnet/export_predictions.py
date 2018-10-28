@@ -18,7 +18,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('config', type=str)
     parser.add_argument('export_name', type=str)
-    parser.add_argument('keys', type=str)
+    parser.add_argument('--keys', type=str, default='*')
     parser.add_argument('--exper_name', type=str)
     parser.add_argument('--as_dataset', action='store_true')
     args = parser.parse_args()
@@ -27,7 +27,7 @@ if __name__ == '__main__':
     exper_name = args.exper_name
     with open(args.config, 'r') as f:
         config = yaml.load(f)
-    keys = args.keys.split(',')
+    keys = '*' if args.keys == '*' else args.keys.split(',')
 
     if args.as_dataset:
         base_dir = Path(DATA_PATH, export_name)
