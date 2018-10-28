@@ -2,8 +2,9 @@ import cv2
 import numpy as np
 from pathlib import Path
 
-from .utils import keypoints_filter_borders, sample_descriptors, nms_fast
-from .utils import keypoints_cv2np
+from .utils.keypoints import (
+    keypoints_filter_borders, nms_fast, keypoints_cv2np)
+from .utils.descriptors import sample_descriptors
 from hfnet.settings import EXPER_PATH
 
 
@@ -64,6 +65,9 @@ def harris_loader(image, name, **config):
 
 
 def export_loader(image, name, experiment, **config):
+    has_keypoints = config.get('has_keypoints', True)
+    has_descriptors = config.get('has_descriptors', True)
+
     num_features = config.get('num_features', 0)
     remove_borders = config.get('remove_borders', 0)
     keypoint_predictor = config.get('keypoint_predictor', None)
@@ -73,9 +77,11 @@ def export_loader(image, name, experiment, **config):
     binarize = config.get('binarize', False)
     entries = ['keypoints', 'scores', 'descriptors']
 
-    path = Path(EXPER_PATH, 'exports', experiment, name.decode('utf-8')+'.npz')
+    name = name.decode('utf-8') if isinstance(name, bytes) else name
+    path = Path(EXPER_PATH, 'exports', experiment, name+'.npz')
     with np.load(path) as p:
         pred = {k: v.copy() for k, v in p.items()}
+    image_size = image.shape[:2]
     if keypoint_predictor:
         keypoint_config = config.get('keypoint_config', config)
         keypoint_config['keypoint_predictor'] = None
@@ -83,16 +89,16 @@ def export_loader(image, name, experiment, **config):
             image, name, **{'experiment': experiment, **keypoint_config})
         pred['keypoints'] = pred_detector['keypoints']
         pred['scores'] = pred_detector['scores']
-    else:
+    elif has_keypoints:
         assert 'keypoints' in pred
         if remove_borders:
             mask = keypoints_filter_borders(
-                pred['keypoints'], image.shape[:2], remove_borders)
+                pred['keypoints'], image_size, remove_borders)
             pred = {**pred,
                     **{k: v[mask] for k, v in pred.items() if k in entries}}
         if do_nms:
             keep = nms_fast(
-                pred['keypoints'], pred['scores'], image.shape[:2], nms_thresh)
+                pred['keypoints'], pred['scores'], image_size, nms_thresh)
             pred = {**pred,
                     **{k: v[keep] for k, v in pred.items() if k in entries}}
         if keypoint_refinement:
@@ -105,9 +111,9 @@ def export_loader(image, name, experiment, **config):
         keep = np.argsort(pred['scores'])[::-1][:num_features]
         pred = {**pred,
                 **{k: v[keep] for k, v in pred.items() if k in entries}}
-    if 'descriptors' not in pred:
+    if has_descriptors and 'descriptors' not in pred:
         pred['descriptors'] = sample_descriptors(
-            pred['local_descriptor_map'], pred['keypoints'], image.shape[:2])
+            pred['local_descriptor_map'], pred['keypoints'], image_size)
     if binarize:
         pred['descriptors'] = pred['descriptors'] > 0
     return pred

@@ -2,9 +2,7 @@ from scipy.spatial import cKDTree
 from sklearn.decomposition import PCA
 import numpy as np
 
-
-def normalize(l, axis=-1):
-    return np.array(l) / np.linalg.norm(l, axis=axis, keepdims=True)
+from .utils.descriptors import normalize
 
 
 def is_gt_match_3D(query_poses, ref_poses, distance_thresh, angle_thresh):

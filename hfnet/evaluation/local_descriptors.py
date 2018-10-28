@@ -2,9 +2,10 @@ import numpy as np
 from tqdm import tqdm
 import cv2
 
-from .shared import compute_pr, compute_average_precision
-from .utils import matching, angle_error
-from .utils import keypoints_warp_2D, keypoints_warp_3D, to_homogeneous
+from .metrics import compute_pr, compute_average_precision
+from .utils.descriptors import matching
+from .utils.keypoints import keypoints_warp_2D, keypoints_warp_3D
+from .utils.misc import to_homogeneous, angle_error
 
 
 def compute_homography_error(kpts1, kpts2, matches, shape2, H_gt):

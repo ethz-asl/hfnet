@@ -1,6 +1,6 @@
 import numpy as np
 
-from .utils import div0
+from .utils.misc import div0
 
 
 def compute_pr(tp, distances, num_gt, reverse=False):
