@@ -52,7 +52,7 @@ class Colmap(BaseDataset):
             data = {**data, **{k: [] for k in
                     ['image2', 'name2', 'depth2', 'K2', '1_T_2']}}
         else:
-            data = {**data, 'w_T_i': []}
+            data = {**data, 'i_T_w': []}
 
         for seq in sequences:
             seq_path = Path(base_path, seq)
@@ -64,7 +64,7 @@ class Colmap(BaseDataset):
 
             # Gather all image info
             data_all = {k: [] for k in ['image', 'name', 'depth',
-                                        'K', 'w_T_i', 'scale']}
+                                        'K', 'i_T_w', 'scale']}
             id_mapping = {}
             for i, (id, info) in enumerate(images.items()):
                 id_mapping[id] = i
@@ -79,7 +79,7 @@ class Colmap(BaseDataset):
                 data_all['image'].append(str(Path(image_dir, info.name)))
                 data_all['depth'].append(str(Path(depth_dir, name+'.h5')))
                 data_all['K'].append(K)
-                data_all['w_T_i'].append(T)
+                data_all['i_T_w'].append(T)
                 data_all['scale'].append(scale)
 
             if config['make_pairs']:
@@ -105,8 +105,8 @@ class Colmap(BaseDataset):
                     for k in ['image', 'name', 'depth', 'K']:
                         data[k].append(data_all[k][id_mapping[idx1]])
                         data[k+'2'].append(data_all[k][id_mapping[idx2]])
-                    T_wto1 = data_all['w_T_i'][id_mapping[idx1]]
-                    T_wto2 = data_all['w_T_i'][id_mapping[idx2]]
+                    T_wto1 = data_all['i_T_w'][id_mapping[idx1]]
+                    T_wto2 = data_all['i_T_w'][id_mapping[idx2]]
                     T_2to1 = np.dot(T_wto1, np.linalg.inv(T_wto2))
                     data['1_T_2'].append(T_2to1)
                     data['scale'].append(scale)
