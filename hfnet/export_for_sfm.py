@@ -12,8 +12,8 @@ from hfnet.evaluation.loaders import export_loader  # noqa: E402
 from hfnet.settings import EXPER_PATH  # noqa: E402
 
 
-def export_for_sfm(data_config, exper_config):
-    export_name = exper_config['experiment']+'_sfm'
+def export_for_sfm(data_config, exper_config, export_name):
+    # export_name = exper_config['experiment']+'_sfm'
     export_dir = Path(EXPER_PATH, 'exports', export_name)
     export_dir.mkdir()
 
@@ -37,6 +37,7 @@ def export_for_sfm(data_config, exper_config):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('export_name', type=str)
+    parser.add_argument('new_export_name', type=str)
     args = parser.parse_args()
 
     data_config = {
@@ -51,7 +52,7 @@ if __name__ == '__main__':
         'predictor': export_loader,
         'num_features': 3000,
         'do_nms': True,
-        'nms_thresh': 8,
+        'nms_thresh': 4,
     }
 
-    export_for_sfm(data_config, exper_config)
+    export_for_sfm(data_config, exper_config, args.new_export_name)
