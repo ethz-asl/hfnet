@@ -16,7 +16,6 @@ def parse_args():
 
 
 def db_image_name_dict(db_file):
-    # CHANGE DATABASE PATH HERE!
     connection = sqlite3.connect(db_file)
     cursor = connection.cursor()
 
