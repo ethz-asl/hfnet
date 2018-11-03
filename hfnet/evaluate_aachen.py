@@ -63,6 +63,7 @@ config_pose = {
     'reproj_error': 20,
     'min_inliers': 15,
     'min_inlier_ratio': 0.15,
+    'additional_min_inliers': 30,
 }
 
 config_aachen = {

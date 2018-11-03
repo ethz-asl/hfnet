@@ -123,13 +123,23 @@ def do_pnp(kpts, lms, query_info, config):
 
     success, R_vec, t, inliers = cv2.solvePnPRansac(
         lms, kpts, query_info.K, np.array([query_info.dist, 0, 0, 0]),
-        iterationsCount=5000, reprojectionError=config['reproj_error'])
+        iterationsCount=5000, reprojectionError=config['reproj_error'],
+        flags=cv2.SOLVEPNP_P3P)
 
     if success:
+        inliers = inliers[:, 0]
         num_inliers = len(inliers)
         inlier_ratio = len(inliers) / len(kpts)
-        success &= num_inliers > config['min_inliers']
-        success &= inlier_ratio > config['min_inlier_ratio']
+        success &= num_inliers >= config['min_inliers']
+        success &= inlier_ratio >= config['min_inlier_ratio']
+        if config['additional_min_inliers']:
+            success |= num_inliers >= config['additional_min_inliers']
+
+        ret, R_vec, t = cv2.solvePnP(
+                lms[inliers], kpts[inliers], query_info.K,
+                np.array([query_info.dist, 0, 0, 0]), rvec=R_vec, tvec=t,
+                useExtrinsicGuess=True, flags=cv2.SOLVEPNP_ITERATIVE)
+        assert ret
 
         query_T_w = np.eye(4)
         query_T_w[:3, :3] = cv2.Rodrigues(R_vec)[0]
@@ -138,7 +148,7 @@ def do_pnp(kpts, lms, query_info, config):
 
         ret = LocResult(success, num_inliers, inlier_ratio, w_T_query)
     else:
-        inliers = np.empty((0, 1), np.int32)
+        inliers = np.empty((0,), np.int32)
         ret = loc_failure
 
     return ret, inliers

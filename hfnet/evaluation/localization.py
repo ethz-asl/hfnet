@@ -133,7 +133,7 @@ class Localization:
                     matched_kpts, matched_lms, query_info, config_pose)
             else:
                 result = loc_failure
-                inliers = np.empty((0, 1), np.int32)
+                inliers = np.empty((0,), np.int32)
 
             results.append(result)
             if debug:
