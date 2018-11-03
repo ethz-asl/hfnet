@@ -3,7 +3,8 @@ import cv2
 from sklearn.decomposition import PCA
 from collections import namedtuple
 
-from .descriptors import matches_cv2np, normalize
+from .descriptors import matches_cv2np, normalize, root_descriptors
+from .db_management import LocalDbItem
 
 
 LocResult = namedtuple(
@@ -25,6 +26,19 @@ def preprocess_globaldb(global_descriptors, config):
         return x
 
     return global_descriptors, f
+
+
+def preprocess_localdb(local_db, config):
+    if config.get('root', False):
+        for frame_id in local_db:
+            item = local_db[frame_id]
+            desc = root_descriptors(item.descriptors)
+            local_db[frame_id] = LocalDbItem(
+                item.landmark_ids, desc, item.keypoints)
+        transf = root_descriptors
+    else:
+        transf = lambda x: x  # noqa: E731
+    return local_db, transf
 
 
 def covis_clustering(frame_ids, local_db, points):

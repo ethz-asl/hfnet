@@ -12,7 +12,7 @@ from .utils.db_management import (
     read_query_list, extract_query, build_localization_dbs)
 from .utils.localization import (
     covis_clustering, match_against_place, do_pnp, preprocess_globaldb,
-    loc_failure)
+    preprocess_localdb, loc_failure, LocResult)
 from hfnet.datasets.colmap_utils.read_model import read_model
 from hfnet.utils.tools import Timer  # noqa: F401 (profiling)
 from hfnet.settings import DATA_PATH
@@ -73,12 +73,14 @@ class Localization:
             globaldb_ids, global_descriptors = pickle.load(f)
         assert np.all(np.array(globaldb_ids) == self.db_ids)
         with open(local_path, 'rb') as f:
-            self.local_db = pickle.load(f)
+            local_db = pickle.load(f)
 
-        logging.info('Indexing global descriptors')
+        logging.info('Indexing descriptors')
         self.global_descriptors, self.global_transform = preprocess_globaldb(
             global_descriptors, config['global'])
         self.global_index = cKDTree(self.global_descriptors)
+        self.local_db, self.local_transform = preprocess_localdb(
+            local_db, config['local'])
 
         self.base_path = base_path
         self.dataset_name = dataset_name
@@ -111,6 +113,7 @@ class Localization:
         # Local matching
         clustered_frames = covis_clustering(
             prior_ids, self.local_db, self.points)
+        local_desc = self.local_transform(query_item.local_desc)
 
         # Iterative pose estimation
         dump = []
@@ -118,8 +121,8 @@ class Localization:
         for place in clustered_frames:
             matches_data = {} if debug else None
             matches, place_lms = match_against_place(
-                place, self.local_db, query_item.local_desc,
-                config_local['ratio_thresh'], debug_dict=matches_data)
+                place, self.local_db, local_desc, config_local['ratio_thresh'],
+                debug_dict=matches_data)
 
             if len(matches) > 3:
                 matched_kpts = query_item.keypoints[matches[:, 0]]

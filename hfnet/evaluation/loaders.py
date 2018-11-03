@@ -4,7 +4,7 @@ from pathlib import Path
 
 from .utils.keypoints import (
     keypoints_filter_borders, nms_fast, keypoints_cv2np)
-from .utils.descriptors import sample_descriptors
+from .utils.descriptors import sample_descriptors, root_descriptors
 from hfnet.settings import EXPER_PATH
 
 
@@ -24,8 +24,7 @@ def sift_loader(image, name, **config):
         keep_indices = np.argsort(scores)[::-1][:num_features]
         kpts, desc, scores = [i[keep_indices] for i in [kpts, desc, scores]]
     if do_root:
-        desc /= np.sum(desc, axis=-1, keepdims=True)
-        desc = np.sqrt(desc)
+        desc = root_descriptors(desc)
     return {'keypoints': kpts, 'descriptors': desc, 'scores': scores}
 
 

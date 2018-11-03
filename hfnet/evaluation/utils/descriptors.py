@@ -6,6 +6,10 @@ def normalize(l, axis=-1):
     return np.array(l) / np.linalg.norm(l, axis=axis, keepdims=True)
 
 
+def root_descriptors(d, axis=-1):
+    return np.sqrt(d / np.sum(d, axis=axis, keepdims=True))
+
+
 def sample_bilinear(data, points):
     # Pad the input data with zeros
     data = np.lib.pad(

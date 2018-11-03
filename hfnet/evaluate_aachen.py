@@ -38,6 +38,7 @@ configs_local = {
     'sift': {
         'db_name': 'localdb_sift.pkl',
         'colmap_db': 'aachen.db',
+        'root': True,
         'ratio_thresh': 0.7,
     },
     'doap': {
