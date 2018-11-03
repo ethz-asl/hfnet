@@ -16,7 +16,7 @@ def preprocess_globaldb(global_descriptors, config):
     global_descriptors = normalize(global_descriptors)
     transf = [lambda x: normalize(x)]  # noqa: E731
     if config.get('pca_dim', 0) > 0:
-        pca = PCA(n_components=config['pca_dim'])
+        pca = PCA(n_components=config['pca_dim'], svd_solver='full')
         global_descriptors = normalize(pca.fit_transform(global_descriptors))
         transf.append(lambda x: normalize(pca.transform(x)))  # noqa: E731
 
