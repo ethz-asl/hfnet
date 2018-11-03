@@ -157,9 +157,11 @@ class Localization:
         if debug:
             debug_data = {
                 **(dump[-1 if result.success else 0]),
-                'index_success': (len(dump)-1) if result.success else -1
+                'index_success': (len(dump)-1) if result.success else -1,
+                'dumps': dump,
+                'results': results,
             }
-            return (result if result.success else results[0]), debug_data
+            return result, debug_data
         else:
             return result
 
