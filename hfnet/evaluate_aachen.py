@@ -3,6 +3,8 @@ from pathlib import Path
 import argparse
 from pprint import pformat
 import yaml
+import numpy as np
+from pyquaternion import Quaternion
 
 # import hfnet
 from hfnet.evaluation.localization import Localization, evaluate
@@ -77,6 +79,7 @@ if __name__ == '__main__':
     parser.add_argument('--build_db', action='store_true')
     parser.add_argument('--queries', type=str, default='day_time')
     parser.add_argument('--max_iter', type=int)
+    parser.add_argument('--export_poses', action='store_true')
     args = parser.parse_args()
 
     config = {
@@ -99,10 +102,23 @@ if __name__ == '__main__':
     queries, query_dataset = loc.init_queries(query_file, config_aachen)
 
     logging.info('Starting evaluation')
-    results = evaluate(loc, queries, query_dataset, max_iter=args.max_iter)
-    logging.info('Evaluation results: \n'+pformat(results))
+    metrics, results = evaluate(
+        loc, queries, query_dataset, max_iter=args.max_iter)
+    logging.info('Evaluation metrics: \n'+pformat(metrics))
 
-    output = {'config': config, 'results': results}
-    output_path = Path(EXPER_PATH, f'eval/{args.eval_name}.yaml')
-    with open(output_path, 'w') as f:
+    output = {'config': config, 'metrics': metrics}
+    output_dir = Path(EXPER_PATH, 'eval')
+    eval_path = Path(output_dir, f'{args.eval_name}.yaml')
+    with open(eval_path, 'w') as f:
         yaml.dump(output, f, default_flow_style=False)
+
+    if args.export_poses:
+        poses_path = Path(output_dir, f'{args.eval_name}_poses.txt')
+        with open(poses_path, 'w') as f:
+            for query, result in zip(queries, results):
+                query_T_w = np.linalg.inv(result.T)
+                qvec_nvm = list(Quaternion(matrix=query_T_w))
+                pos_nvm = query_T_w[:3, 3].tolist()
+                line = f'{Path(query.name).name}'
+                line += ' ' + ' '.join(map(str, qvec_nvm+pos_nvm))
+                f.write(line+'\n')

@@ -9,7 +9,8 @@ from tqdm import tqdm
 from hfnet.datasets import get_dataset
 from .utils import db_management
 from .utils.db_management import (
-    read_query_list, extract_query, build_localization_dbs)
+    read_query_list, extract_query, build_localization_dbs,
+    colmap_image_to_pose)
 from .utils.localization import (
     covis_clustering, match_against_place, do_pnp, preprocess_globaldb,
     preprocess_localdb, loc_failure, LocResult)
@@ -134,6 +135,7 @@ class Localization:
                 result = loc_failure
                 inliers = np.empty((0, 1), np.int32)
 
+            results.append(result)
             if debug:
                 dump.append({
                     'query_item': query_item,
@@ -143,9 +145,14 @@ class Localization:
                     'matches': matches,
                     'inliers': inliers,
                 })
-                results.append(result)
             if result.success:
                 break
+
+        # In case of failure we return the pose of the first retrieved prior
+        if not result.success:
+            result = results[0]
+            result = LocResult(False, result.num_inliers, result.inlier_ratio,
+                               colmap_image_to_pose(self.images[prior_ids[0]]))
 
         if debug:
             debug_data = {
@@ -180,4 +187,4 @@ def evaluate(loc, queries, query_dataset, max_iter=None):
         'inlier_ratios': np.mean(ratios[success]),
         'failure': np.arange(len(success))[np.logical_not(success)]
     }
-    return {k: v.tolist() for k, v in metrics.items()}
+    return {k: v.tolist() for k, v in metrics.items()}, results
