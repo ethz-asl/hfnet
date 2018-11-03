@@ -22,12 +22,13 @@ def db_image_name_dict(db_file):
     # Get a mapping between image ids and image names
     name_to_image_id = dict()
     image_ids = []
-    cursor.execute('SELECT image_id, name FROM images;')
+    cursor.execute('SELECT image_id, camera_id, name FROM images;')
     for row in cursor:
         image_id = row[0]
         image_ids.append(image_id)
-        name = row[1]
-        name_to_image_id[name] = image_id
+        camera_id = row[1]
+        name = row[2]
+        name_to_image_id[name] = (image_id, camera_id)
 
     return name_to_image_id
 
@@ -75,11 +76,12 @@ def process(nvm_data, name_to_image_id,outfile):
     #   IMAGE_ID, QW, QX, QY, QZ, TX, TY, TZ, CAMERA_ID, NAME
 
     # nvm format
+    # <File name> <focal length> <quaternion WXYZ> <camera center> <radial distortion> 0
     # q -> data[2], data[3], data[4], data[5]
     # p -> data[6], data[7], data[8]
 
     assert(nvm_data[0] in name_to_image_id), nvm_data[0]
-    image_id = name_to_image_id[nvm_data[0]]
+    image_id = name_to_image_id[nvm_data[0]][0]
 
     assert (image_id > 0)
 
@@ -92,7 +94,9 @@ def process(nvm_data, name_to_image_id,outfile):
     outfile.write(str(image_id))
     outfile.write(' %s %s %s %s %f %f %f ' %(nvm_data[2],nvm_data[3], \
         nvm_data[4],nvm_data[5],p_colmap[0],p_colmap[1],p_colmap[2]))
-    outfile.write(str(image_id) + ' ')
+    # Write the corresponding camera id from the database file, as some
+    # intrinsics could have been merged in the database (and not in NVM).
+    outfile.write(str(name_to_image_id[nvm_data[0]][1]) + ' ')
     outfile.write(nvm_data[0] + '\n\n')
 
 
