@@ -2,8 +2,13 @@ import numpy as np
 import os
 from collections import defaultdict
 import sqlite3
+from tqdm import tqdm
 
 from internal import nvm_to_colmap_helper
+
+# Convert the txt model to bin before importing via GUI!:
+# e.g. colmap model_converter --input_path from_nvm/ --output_path from_nvm/ --output_type BIN
+
 
 # <Camera> = <File name> <focal length> <quaternion WXYZ> <camera center> <radial distortion> 0
 # <Point>  = <XYZ> <RGB> <number of measurements> <List of Measurements>
@@ -31,7 +36,8 @@ def camera_params_from_image_id(image_id):
     data = cursor.fetchall()
     assert(len(data) == 1)
 
-    cursor.execute("SELECT model, width, height, params FROM cameras WHERE camera_id=?;", (data[0][0],))
+    camera_id = data[0][0]
+    cursor.execute("SELECT model, width, height, params FROM cameras WHERE camera_id=?;", (camera_id,))
     data = cursor.fetchall()
     assert(len(data) == 1)
     params = np.fromstring(data[0][3], dtype=np.double)
@@ -39,7 +45,7 @@ def camera_params_from_image_id(image_id):
     cursor.close()
     connection.close()
 
-    return data[0][1], data[0][2], params
+    return camera_id, data[0][1], data[0][2], params
 
 
 def read_keypoints_from_db(image_id):
@@ -65,22 +71,21 @@ def export_image_data(image_data, image_id_to_keypoints):
 
     image_id = 0
 
-    for nvm_data in image_data:
+    for nvm_data in tqdm(image_data, total=len(image_data), unit="images"):
         q_nvm_str = str(nvm_data[2] + ' ' + nvm_data[3] + ' ' + nvm_data[4] + ' ' + nvm_data[5])
         q_nvm = np.fromstring(q_nvm_str, dtype=float, sep=' ')
         p_nvm = np.array([float(nvm_data[6]), float(nvm_data[7]), float(nvm_data[8])])
 
         p_colmap = nvm_to_colmap_helper.convert_nvm_pose_to_colmap_p(q_nvm, p_nvm)
 
-        out_images.write(str(image_id))
+        db_image_id = image_id_from_name(nvm_data[0])
+        camera_id, width, height, params = camera_params_from_image_id(db_image_id)
+
+        out_images.write(str(db_image_id))
         out_images.write(' %s %s %s %s %f %f %f ' %(nvm_data[2],nvm_data[3], \
             nvm_data[4],nvm_data[5],p_colmap[0],p_colmap[1],p_colmap[2]))
-        out_images.write(str(image_id) + ' ')
+        out_images.write(str(camera_id) + ' ')
         out_images.write(nvm_data[0] + '\n')
-
-        db_image_id = image_id_from_name(nvm_data[0])
-
-        width, height, params = camera_params_from_image_id(db_image_id)
 
         focal_length = float(nvm_data[1])
         distortion = -1 * float(nvm_data[9])
@@ -91,7 +96,7 @@ def export_image_data(image_data, image_id_to_keypoints):
         # cameras.txt format: CAMERA_ID, MODEL, WIDTH, HEIGHT, PARAMS[]
         # e.g. 4479 SIMPLE_RADIAL 1067 1600 1094.05 533.5 800 -0.0819757
         # id, model, w, h, f, px, py, k
-        out_cameras.write(str(image_id) + ' SIMPLE_RADIAL %d %d %f %f %f %f\n' %(width, height, focal_length, params[1], params[2], distortion))
+        out_cameras.write(str(camera_id) + ' SIMPLE_RADIAL %d %d %f %f %f %f\n' %(width, height, focal_length, params[1], params[2], distortion))
 
         # Now export the keypoints that correspond to 3D points.
         keypoints = read_keypoints_from_db(db_image_id)
@@ -128,7 +133,8 @@ def main():
     # POINT3D_ID, X, Y, Z, R, G, B, ERROR, TRACK[] as (IMAGE_ID, POINT2D_IDX)
     out_points = open("points3D.txt", "w")
 
-    image_id_to_keypoints = defaultdict(list)
+    image_idx_to_keypoints = defaultdict(list)
+    image_idx_to_db_image_id = []
     image_data = []
 
     with open('aachen_cvpr2018_db.nvm') as f:
@@ -150,7 +156,9 @@ def main():
         for i, line in enumerate(f):
             if i == total_num_images:
                 break
-            image_data.append(line.split(' '))
+            line_list = line.split(' ')
+            image_data.append(line_list)
+            image_idx_to_db_image_id.append(image_id_from_name(line_list[0]))
 
 
         for line in f:
@@ -160,8 +168,8 @@ def main():
                 total_num_points = int(line)
                 break
 
-        print 'Will read', total_num_points, 'lines.'
-        for i, line in enumerate(f):
+        print 'Will export', total_num_points, '3D point entries.'
+        for i, line in tqdm(enumerate(f), total=total_num_points, unit="pts"):
             xyz = np.array(line.split()[0:3]).astype(np.float)
             rgb = np.array(line.split()[3:6]).astype(np.int)
             num_observations = int(line.split()[6])
@@ -176,15 +184,17 @@ def main():
                 # In NVM, keypoints and images are indexed from 0.
                 img_index = int(observation[0])
                 kp_index = int(observation[1])
-                image_id_to_keypoints[img_index].append((kp_index, float(observation[2]), float(observation[3]), i))
+                image_idx_to_keypoints[img_index].append((kp_index, float(observation[2]), float(observation[3]), i))
 
-                out_points.write('%d %d ' %(int(observation[0]), kp_index))
+                db_image_id = image_idx_to_db_image_id[img_index]
+
+                out_points.write('%d %d ' %(db_image_id, kp_index))
 
             out_points.write('\n')
 
     out_points.close()
     print 'Points3D done. Now exporting images.'
-    export_image_data(image_data, image_id_to_keypoints)
+    export_image_data(image_data, image_idx_to_keypoints)
 
     print 'Done.'
 
