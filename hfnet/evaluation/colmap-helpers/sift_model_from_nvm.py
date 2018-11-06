@@ -109,14 +109,15 @@ def export_image_data(image_data, image_id_to_keypoints):
                 point_index = matching_keypoint[3]
                 kp_index = matching_keypoint[0]
 
+                assert(kp_index not in associated_keypoints)
                 associated_keypoints[kp_index] = point_index
 
                 # Sanity check of the keypoint locations.
                 #print matching_keypoint[1:3]
                 #print keypoints[kp_index, 0:2]
 
-        for i, keypoint in enumerate(keypoints):
-            if i in associated_keypoints:
+        for kp_index, keypoint in enumerate(keypoints):
+            if kp_index in associated_keypoints:
                 point_idx = associated_keypoints[kp_index]
             else:
                 point_idx = -1
@@ -169,12 +170,12 @@ def main():
                 break
 
         print 'Will export', total_num_points, '3D point entries.'
-        for i, line in tqdm(enumerate(f), total=total_num_points, unit="pts"):
+        for point_idx, line in tqdm(enumerate(f), total=total_num_points, unit="pts"):
             xyz = np.array(line.split()[0:3]).astype(np.float)
             rgb = np.array(line.split()[3:6]).astype(np.int)
             num_observations = int(line.split()[6])
 
-            out_points.write('%d %.3f %.3f %.3f %d %d %d 1 ' %(i, xyz[0], xyz[1], xyz[2], rgb[0], rgb[1], rgb[2]))
+            out_points.write('%d %.3f %.3f %.3f %d %d %d 1 ' %(point_idx, xyz[0], xyz[1], xyz[2], rgb[0], rgb[1], rgb[2]))
 
             for j in range(0, num_observations):
                 # Offset + 4 values per observation.
@@ -184,7 +185,7 @@ def main():
                 # In NVM, keypoints and images are indexed from 0.
                 img_index = int(observation[0])
                 kp_index = int(observation[1])
-                image_idx_to_keypoints[img_index].append((kp_index, float(observation[2]), float(observation[3]), i))
+                image_idx_to_keypoints[img_index].append((kp_index, float(observation[2]), float(observation[3]), point_idx))
 
                 db_image_id = image_idx_to_db_image_id[img_index]
 
