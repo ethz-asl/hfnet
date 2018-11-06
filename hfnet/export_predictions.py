@@ -4,6 +4,7 @@ import yaml
 import logging
 from pathlib import Path
 from tqdm import tqdm
+from pprint import pformat
 
 logging.basicConfig(format='[%(asctime)s %(levelname)s] %(message)s',
                     datefmt='%m/%d/%Y %H:%M:%S',
@@ -37,8 +38,10 @@ if __name__ == '__main__':
     base_dir.mkdir(parents=True, exist_ok=True)
 
     if exper_name:
+        # Update only the model config (not the dataset)
         with open(Path(EXPER_PATH, exper_name, 'config.yml'), 'r') as f:
-            config = tools.dict_update(yaml.load(f), config)
+            config['model'] = tools.dict_update(
+                yaml.load(f)['model'], config.get('model', {}))
         checkpoint_path = Path(EXPER_PATH, exper_name)
         if config.get('weights', None):
             checkpoint_path = Path(checkpoint_path, config['weights'])
@@ -46,6 +49,7 @@ if __name__ == '__main__':
         assert 'weights' in config, (
                 'Experiment name not found, weights must be provided.')
         checkpoint_path = Path(DATA_PATH, 'weights', config['weights'])
+    logging.info(f'Starting export with configuration:\n{pformat(config)}')
 
     with get_model(config['model']['name'])(
             data_shape={'image': [None, None, None, config['model']['image_channels']]},
