@@ -37,9 +37,26 @@ def sample_bilinear(data, points):
     return (Ia.T*wa).T + (Ib.T*wb).T + (Ic.T*wc).T + (Id.T*wd).T
 
 
-def sample_descriptors(descriptor_map, keypoints, image_size):
-    factor = np.array(descriptor_map.shape[:-1]) / np.array(image_size)
-    desc = sample_bilinear(descriptor_map, keypoints*factor[::-1])
+def sample_descriptors(descriptor_map, keypoints, image_shape,
+                       input_shape=None, do_round=True):
+    '''In some cases, the deep network computing the dense descriptors requires
+       the input to be divisible by the downsampling rate, and crops the
+       remaining pixels (PyTorch) or pad the input (Tensorflow). We assume the
+       PyTorch behavior and round the factor between the network input
+       (input shape) and the output (desc_shape). The keypoints are assumed to
+       be at the scale of image_shape.
+    '''
+    fix = np.round if do_round else lambda x: x
+    image_shape = np.array(image_shape)
+    desc_shape = np.array(descriptor_map.shape[:-1])
+
+    if input_shape is not None:
+        input_shape = np.array(input_shape)
+        factor = image_shape / input_shape * fix(input_shape / desc_shape)
+    else:
+        factor = image_shape / desc_shape
+
+    desc = sample_bilinear(descriptor_map, keypoints/factor[::-1])
     desc = normalize(desc, axis=1)
     assert np.all(np.isfinite(desc))
     return desc

@@ -80,7 +80,7 @@ def export_loader(image, name, experiment, **config):
     path = Path(EXPER_PATH, 'exports', experiment, name+'.npz')
     with np.load(path) as p:
         pred = {k: v.copy() for k, v in p.items()}
-    image_size = image.shape[:2]
+    image_shape = image.shape[:2]
     if keypoint_predictor:
         keypoint_config = config.get('keypoint_config', config)
         keypoint_config['keypoint_predictor'] = None
@@ -92,12 +92,12 @@ def export_loader(image, name, experiment, **config):
         assert 'keypoints' in pred
         if remove_borders:
             mask = keypoints_filter_borders(
-                pred['keypoints'], image_size, remove_borders)
+                pred['keypoints'], image_shape, remove_borders)
             pred = {**pred,
                     **{k: v[mask] for k, v in pred.items() if k in entries}}
         if do_nms:
             keep = nms_fast(
-                pred['keypoints'], pred['scores'], image_size, nms_thresh)
+                pred['keypoints'], pred['scores'], image_shape, nms_thresh)
             pred = {**pred,
                     **{k: v[keep] for k, v in pred.items() if k in entries}}
         if keypoint_refinement:
@@ -112,7 +112,9 @@ def export_loader(image, name, experiment, **config):
                 **{k: v[keep] for k, v in pred.items() if k in entries}}
     if has_descriptors and 'descriptors' not in pred:
         pred['descriptors'] = sample_descriptors(
-            pred['local_descriptor_map'], pred['keypoints'], image_size)
+            pred['local_descriptor_map'], pred['keypoints'], image_shape,
+            input_shape=pred['input_shape'][:2] if 'input_shape' in pred
+            else None)
     if binarize:
         pred['descriptors'] = pred['descriptors'] > 0
     return pred
