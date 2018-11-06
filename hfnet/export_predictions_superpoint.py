@@ -155,7 +155,6 @@ class SuperPointFrontend:
         inp = torch.from_numpy(image[np.newaxis, np.newaxis, :, :, 0])/255
         outs = self.net.forward(inp.cuda())
         semi, coarse_desc = outs[0], outs[1]
-        # Convert pytorch -> numpy.
         semi = semi.data.cpu().numpy().squeeze()
         # --- Process points.
         dense = np.exp(semi) # Softmax.
@@ -170,23 +169,24 @@ class SuperPointFrontend:
         heatmap = np.transpose(heatmap, [0, 2, 1, 3])
         heatmap = np.reshape(heatmap, [Hc*self.cell, Wc*self.cell])
         xs, ys = np.where(heatmap >= self.conf_thresh) # Confidence threshold.
-        assert len(xs) != 0
         pts = np.zeros((3, len(xs))) # Populate point data sized 3xN.
-        pts[0, :] = ys
-        pts[1, :] = xs
-        pts[2, :] = heatmap[xs, ys]
-        if self.nms_dist:
-            pts, _ = self.nms_fast(pts, H, W, dist_thresh=self.nms_dist) # Apply NMS.
-        inds = np.argsort(pts[2,:])
-        pts = pts[:,inds[::-1]] # Sort by confidence.
-        # Remove points along border.
-        bord = self.border_remove
-        toremoveW = np.logical_or(pts[0, :] < bord, pts[0, :] >= (W-bord))
-        toremoveH = np.logical_or(pts[1, :] < bord, pts[1, :] >= (H-bord))
-        toremove = np.logical_or(toremoveW, toremoveH)
-        pts = pts[:, ~toremove]
+        if len(xs) > 0:
+            pts[0, :] = ys
+            pts[1, :] = xs
+            pts[2, :] = heatmap[xs, ys]
+            if self.nms_dist:
+                pts, _ = self.nms_fast(pts, H, W, dist_thresh=self.nms_dist) # Apply NMS.
+            inds = np.argsort(pts[2,:])
+            pts = pts[:,inds[::-1]] # Sort by confidence.
+            # Remove points along border.
+            bord = self.border_remove
+            toremoveW = np.logical_or(pts[0, :] < bord, pts[0, :] >= (W-bord))
+            toremoveH = np.logical_or(pts[1, :] < bord, pts[1, :] >= (H-bord))
+            toremove = np.logical_or(toremoveW, toremoveH)
+            pts = pts[:, ~toremove]
         ret = {'keypoints': pts[:2].T.astype(np.int),
                'local_descriptor_map': np.rollaxis(coarse_desc.detach().cpu().numpy()[0], 0, 3),
+               'dense_scores': np.rollaxis(dense, 0, 3),
                'scores': pts[2]}
         return ret
 
@@ -197,6 +197,7 @@ if __name__ == '__main__':
     parser.add_argument('export_name', type=str)
     parser.add_argument('--exper_name', type=str)
     parser.add_argument('--as_dataset', action='store_true')
+    parser.add_argument('--keys', type=str, default='*')
     args = parser.parse_args()
 
     export_name = args.export_name
@@ -218,6 +219,8 @@ if __name__ == '__main__':
     with torch.no_grad():
         for data in tqdm(test_set):
             predictions = net.run(data['image'])
+            if args.keys != '*':
+                predictions = {k: predictions[k] for k in args.keys.split(',')}
             predictions['input_shape'] = data['image'].shape
             name = data['name'].decode('utf-8')
             Path(base_dir, Path(name).parent).mkdir(parents=True, exist_ok=True)
