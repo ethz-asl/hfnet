@@ -30,8 +30,10 @@
 # Author: Johannes L. Schoenberger (jsch-at-demuc-dot-de)
 
 
-import sqlite3
+from collections import defaultdict
 import numpy as np
+import sqlite3
+from tqdm import tqdm
 
 
 def pair_id_to_image_ids(pair_id):
@@ -51,20 +53,45 @@ def get_matching_images(database_file, min_num_matches, filter_image_dir):
         image_name = row[2]
         images[image_id] = image_name
 
-    matching_image_pairs = []
+    two_way_matches = defaultdict(list)
     cursor.execute(
         "SELECT pair_id, data FROM two_view_geometries WHERE rows>=?;",
         (min_num_matches,))
     for row in cursor:
         pair_id = row[0]
-        inlier_matches = np.fromstring(row[1],
-                                       dtype=np.uint32).reshape(-1, 2)
+        inlier_matches = np.fromstring(row[1], dtype=np.uint32).reshape(-1, 2)
+
         image_id1, image_id2 = pair_id_to_image_ids(pair_id)
         image_name1 = images[image_id1]
         image_name2 = images[image_id2]
 
+        num_matches = inlier_matches.shape[0]
+
+        # Make sure the match comes from the desired directory.
         if image_name1.startswith(filter_image_dir) and image_name2.startswith(filter_image_dir):
-            matching_image_pairs.append((image_name1, image_name2))
+            two_way_matches[image_id1].append((image_id2, num_matches))
+            two_way_matches[image_id2].append((image_id1, num_matches))
+
+    matching_image_pairs = []
+    for image_id, direct_matching_frames in tqdm(two_way_matches.iteritems(), total=len(two_way_matches.keys())):
+        image_name = images[image_id]
+
+        matching_frames = set()
+        for matching_frame in direct_matching_frames:
+            assert(matching_frame[1] >= min_num_matches)
+            if matching_frame[0] > image_id:
+                matching_frames.add(matching_frame[0])
+
+            # Do one hop.
+            for match in two_way_matches[matching_frame[0]]:
+                if matching_frame[1] > 2 * min_num_matches and match[1] > 2 * min_num_matches and match[0] > image_id:
+                    matching_frames.add(match[0])
+
+        # Insert the direct matching pairs.
+        for match in matching_frames:
+            assert(match > image_id)
+            match = images[match]
+            matching_image_pairs.append((image_name, match))
 
     cursor.close()
     connection.close()

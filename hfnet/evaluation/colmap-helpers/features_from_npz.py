@@ -2,6 +2,7 @@ import argparse
 import cv2
 import numpy as np
 import os
+from tqdm import tqdm
 
 
 def parse_args():
@@ -26,7 +27,6 @@ def export_features_from_npz(filename, in_path, out_path):
     original_height, original_width = img.shape
 
     out_path_and_name = os.path.join(out_path, filename) + '.jpg.txt'
-    print path_file, '->', out_path_and_name
     outfile = open(out_path_and_name, "w+")
 
     scaling = np.array(img.shape)[::-1] / np.array(frame1['image_size']).astype(np.float)
@@ -50,7 +50,8 @@ def export_features_from_npz(filename, in_path, out_path):
 
 def export_feature_detections():
     args = parse_args()
-    for filename in os.listdir(args.npz_dir):
+    total_files = len(os.listdir(args.npz_dir))
+    for filename in tqdm(os.listdir(args.npz_dir), total=total_files, unit='npz'):
         if filename.endswith(".npz"):
              export_features_from_npz(filename, args.npz_dir, args.image_dir)
 
