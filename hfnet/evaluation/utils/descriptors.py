@@ -74,7 +74,7 @@ def matching(desc1, desc2, do_ratio_test=False, cross_check=True):
         matches = []
         matcher = cv2.BFMatcher(norm)
         for m, n in matcher.knnMatch(desc1, desc2, k=2):
-            m.distance = m.distance / n.distance
+            m.distance = 1.0 if (n.distance == 0) else m.distance / n.distance
             matches.append(m)
     else:
         matcher = cv2.BFMatcher(norm, crossCheck=cross_check)

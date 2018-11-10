@@ -33,13 +33,13 @@ class Localization:
         # Statistics for debugging
         kpts_per_image = np.median(np.array(
             [len(i.point3D_ids) for i in self.images.values()]))
-        obs_per_image = np.mean(np.array(
+        obs_per_image = np.nanmean(np.array(
             [np.mean(i.point3D_ids > 0) for i in self.images.values()]))
         logging.info(
             f'Number of images: {len(self.images)}\n'
             f'Number of points: {len(self.points)}\n'
             f'Median keypoints per image: {kpts_per_image}\n'
-            f'Ratio of matches keypoints: {obs_per_image:.3f}\n'
+            f'Ratio of matched keypoints: {obs_per_image:.3f}\n'
         )
 
         # Resolve paths in config
@@ -100,7 +100,7 @@ class Localization:
         config_local = self.config['local']
         config_pose = self.config['pose']
 
-        # Fecth data
+        # Fetch data
         query_item = extract_query(
             query_data, query_info, config_global, config_local)
 
@@ -166,7 +166,6 @@ class Localization:
             return result
 
 
-# TODO: add distance/angle to closest prior frame
 def evaluate(loc, queries, query_dataset, max_iter=None):
     results = []
     query_iter = query_dataset.get_test_set()

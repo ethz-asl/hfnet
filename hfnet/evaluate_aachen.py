@@ -108,7 +108,8 @@ if __name__ == '__main__':
     logging.info('Evaluation metrics: \n'+pformat(metrics))
 
     output = {'config': config, 'metrics': metrics}
-    output_dir = Path(EXPER_PATH, 'eval')
+    output_dir = Path(EXPER_PATH, 'eval/aachen')
+    output_dir.mkdir(exist_ok=True, parents=True)
     eval_path = Path(output_dir, f'{args.eval_name}.yaml')
     with open(eval_path, 'w') as f:
         yaml.dump(output, f, default_flow_style=False)
