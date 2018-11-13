@@ -89,7 +89,13 @@ def build_localization_dbs(db_ids, images, cameras,
                 desc = pred['descriptors']
             elif 'colmap_db' in config_local:
                 cursor = get_cursor(config_local['colmap_db'])
-                desc = descriptors_from_colmap_db(cursor, image_id)
+                if config_local.get('broken_db', False):
+                    db_image_id, = next(cursor.execute(
+                        'SELECT image_id FROM images '
+                        f'WHERE name="{db_item.name}";'))
+                else:
+                    db_image_id = image_id
+                desc = descriptors_from_colmap_db(cursor, db_image_id)
                 assert desc.shape[0] == len(valid)
                 desc = desc[valid]
             else:
@@ -131,9 +137,14 @@ def extract_query(data, info, config_global, config_local):
                    / np.array(data['image'].shape[:2][::-1]))
         kpts = kpts * scaling
     elif 'colmap_db' in config_local:
-        cursor = get_cursor(config_local['colmap_db'])
+        db_name = config_local.get(
+            'colmap_db_queries', config_local['colmap_db'])
+        cursor = get_cursor(db_name)
+        db_query_name = info.name
+        if config_local.get('broken_db', False):
+            db_query_name = db_query_name.replace('jpg', 'png')
         query_id, = next(cursor.execute(
-            f'SELECT image_id FROM images WHERE name="{info.name}";'))
+            f'SELECT image_id FROM images WHERE name="{db_query_name}";'))
         kpts = keypoints_from_colmap_db(cursor, query_id)[:, :2]
         local_desc = descriptors_from_colmap_db(cursor, query_id)
     else:

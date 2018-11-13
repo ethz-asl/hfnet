@@ -4,6 +4,7 @@ from pathlib import Path
 import pickle
 from scipy.spatial import cKDTree
 import sys
+import yaml
 from tqdm import tqdm
 
 from hfnet.datasets import get_dataset
@@ -46,6 +47,9 @@ class Localization:
         if 'colmap_db' in config['local']:
             db_path = Path(base_path, config['local']['colmap_db'])
             config['local']['colmap_db'] = db_path.as_posix()
+        if 'colmap_db_queries' in config['local']:
+            db_path = Path(base_path, config['local']['colmap_db_queries'])
+            config['local']['colmap_db_queries'] = db_path.as_posix()
         global_path = Path(base_path, 'databases', config['global']['db_name'])
         local_path = Path(base_path, 'databases', config['local']['db_name'])
 
@@ -72,7 +76,23 @@ class Localization:
         logging.info('Importing global and local databases')
         with open(global_path, 'rb') as f:
             globaldb_ids, global_descriptors = pickle.load(f)
-        assert np.all(np.array(globaldb_ids) == self.db_ids)
+
+        # Sometimes the ids in the new model and in the original model differ
+        # A mapping has to be generated in the models directory
+        if not np.all(np.array(globaldb_ids) == self.db_ids):
+            if not np.all(np.unique(self.db_ids) == np.unique(globaldb_ids)):
+                logging.info('Model ids and globaldb ids do not match, '
+                             'looking for mapping file.')
+                with open(Path(base_path, 'models/name2id.yaml'), 'r') as f:
+                    name2originalid = yaml.load(f)
+                original_ids = [
+                    name2originalid[self.images[i].name] for i in self.db_ids]
+                originalid2newid = {
+                    o: n for o, n in zip(original_ids, self.db_ids)}
+                globaldb_ids = [originalid2newid[i] for i in globaldb_ids]
+            global_descriptors = global_descriptors[
+                np.array([globaldb_ids.index(i) for i in self.db_ids])]
+        assert np.all(np.sort(self.db_ids) == np.sort(globaldb_ids))
         with open(local_path, 'rb') as f:
             local_db = pickle.load(f)
 
