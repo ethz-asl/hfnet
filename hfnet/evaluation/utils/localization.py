@@ -77,10 +77,36 @@ def covis_clustering(frame_ids, local_db, points):
 
 
 def match_against_place(frame_ids, local_db, query_desc, ratio_thresh,
-                        debug_dict=None):
+                        debug_dict=None, expand_obs=False, graph=None,
+                        model_info=None):
     place_db = [local_db[frame_id] for frame_id in frame_ids]
     place_lms = np.concatenate([db.landmark_ids for db in place_db])
     place_desc = np.concatenate([db.descriptors for db in place_db])
+
+    # Debug
+    lm_frames = [frame_id for frame_id, db in zip(frame_ids, place_db)
+                 for _ in db.landmark_ids]
+    lm_indices = np.concatenate([np.arange(len(db.keypoints))
+                                 for db in place_db])
+
+    if expand_obs:
+        new_desc_indices = []
+        new_lms = []
+        for lm in place_lms:
+            for f_id, kpt in zip(graph[lm].image_ids, graph[lm].point2D_idxs):
+                if f_id in frame_ids:
+                    continue
+                new_lms.append(lm)
+                f_lms = model_info[f_id].point3D_ids
+                desc_idx = np.where(f_lms[f_lms > 0] == lm)[0][0]
+                new_desc_indices.append((f_id, desc_idx))
+        place_lms = np.append(place_lms, new_lms)
+        place_desc = np.append(
+            place_desc,
+            [local_db[f].descriptors[d] for f, d in new_desc_indices],
+            axis=0)
+        lm_frames.extend([f for f, _ in new_desc_indices])
+        lm_indices = np.append(lm_indices, [d for _, d in new_desc_indices])
 
     if len(query_desc) > 0 and len(place_desc) > 1:
         matcher = cv2.BFMatcher(cv2.NORM_L2)
@@ -96,11 +122,6 @@ def match_against_place(frame_ids, local_db, query_desc, ratio_thresh,
         matches = np.empty((0, 2), np.int32)
 
     if debug_dict is not None and len(matches) > 0:
-        lm_frames = [frame_id for frame_id, db in zip(frame_ids, place_db)
-                     for _ in db.landmark_ids]
-        lm_indices = np.concatenate([np.arange(len(db.keypoints))
-                                     for db in place_db])
-
         sorted_frames, counts = np.unique(
             [lm_frames[m2] for m1, m2 in matches], return_counts=True)
         best_frame_id = sorted_frames[np.argmax(counts)]
