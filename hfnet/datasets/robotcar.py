@@ -1,20 +1,21 @@
 import tensorflow as tf
+import random
 from pathlib import Path
 
 from .base_dataset import BaseDataset
 from hfnet.settings import DATA_PATH
 
 
-class Aachen(BaseDataset):
+class Robotcar(BaseDataset):
     default_config = {
-        'load_db': True,
-        'load_queries': True,
+        'sequences': [],
         'image_names': None,
-        'grayscale': True,
         'resize_max': 640,
+        'shuffle': False,
+        'grayscale': True,
         'num_parallel_calls': 10,
     }
-    dataset_folder = 'aachen/images_upright'
+    dataset_folder = 'robotcar/images'
 
     def _init_dataset(self, **config):
         tf.data.Dataset.map_parallel = lambda self, fn: self.map(
@@ -24,12 +25,8 @@ class Aachen(BaseDataset):
         if config['image_names'] is not None:
             paths = [Path(base_path, n) for n in config['image_names']]
         else:
-            search = []
-            if config['load_db']:
-                search.append(Path(base_path, 'db'))
-            if config['load_queries']:
-                search.append(Path(base_path, 'query'))
-            assert len(search) != 0
+            search = [Path(base_path, s) for s in config['sequences']]
+            assert len(search) > 0
             paths = [p for s in search for p in s.glob('**/*.jpg')]
 
         data = {'image': [], 'name': []}
@@ -37,6 +34,10 @@ class Aachen(BaseDataset):
             data['image'].append(p.as_posix())
             rel = p.relative_to(base_path)
             data['name'].append(Path(rel.parent, rel.stem).as_posix())
+        if config['shuffle']:
+            data_list = [dict(zip(data, d)) for d in zip(*data.values())]
+            random.Random(0).shuffle(data_list)
+            data = {k: [dic[k] for dic in data_list] for k in data_list[0]}
         return data
 
     def _get_data(self, data, split_name, **config):

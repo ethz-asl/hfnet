@@ -19,7 +19,10 @@ class Colmap(BaseDataset):
         'max_num_pairs': 200,
         'shuffle': False,
         'random_seed': 0,
-        'preprocessing': {'resize_max': 640},
+        'preprocessing': {
+            'resize_max': 640,
+            'grayscale': True,
+        },
         'scale_file': 'scales.txt',
         'num_parallel_calls': 10,
     }
@@ -149,7 +152,8 @@ class Colmap(BaseDataset):
             image, depth, K = data['image'], data['depth'], data['K']
             tf.Tensor.set_shape(image, [None, None, 3])
             tf.Tensor.set_shape(depth, [None, None])
-            image = tf.image.rgb_to_grayscale(image)
+            if config['preprocessing']['grayscale']:
+                image = tf.image.rgb_to_grayscale(image)
             original_size = tf.shape(image)[:2]
             if config['preprocessing']['resize_max']:
                 image = _resize_max(
