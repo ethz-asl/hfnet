@@ -83,9 +83,9 @@ def get_matching_images(database_file, min_num_matches, filter_image_dir):
                 matching_frames.add(matching_frame[0])
 
             # Do one hop.
-            for match in two_way_matches[matching_frame[0]]:
-                if matching_frame[1] > 2 * min_num_matches and match[1] > 2 * min_num_matches and match[0] > image_id:
-                    matching_frames.add(match[0])
+            # for match in two_way_matches[matching_frame[0]]:
+            #    if matching_frame[1] > 2 * min_num_matches and match[1] > 2 * min_num_matches and match[0] > image_id:
+            #        matching_frames.add(match[0])
 
         # Insert the direct matching pairs.
         for match in matching_frames:
