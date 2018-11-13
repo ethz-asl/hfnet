@@ -90,6 +90,7 @@ def match_against_place(frame_ids, local_db, query_desc, ratio_thresh,
                                  for db in place_db])
 
     if expand_obs:
+        assert graph is not None and model_info is not None
         new_desc_indices = []
         new_lms = []
         for lm in place_lms:
