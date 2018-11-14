@@ -73,7 +73,7 @@ def main():
             assert(len(keypoint_matches_for_different_ratios) == len(ratio_test_values))
 
         for i, keypoint_matches in enumerate(keypoint_matches_for_different_ratios):
-            if len(keypoint_matches) > args.min_num_matches:
+            if len(keypoint_matches) > 15: #args.min_num_matches:
                 outfiles[i].write(matching_pair[0] + ' ' + matching_pair[1] + '\n')
                 for match in keypoint_matches:
                     outfiles[i].write(str(match[0]) + ' ' + str(match[1]) + '\n')

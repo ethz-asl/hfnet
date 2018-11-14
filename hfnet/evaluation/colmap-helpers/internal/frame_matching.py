@@ -92,13 +92,25 @@ def match_frames(path_npz1, path_npz2, path_image1, path_image2, num_points,
         matcher = cv2.BFMatcher(cv2.NORM_L2)
         matches = matcher.knnMatch(des1, des2, k=2)
 
+        smallest_distances = [dict() for x in ratio_test_values]
+
         # Ratio test as per Lowe's paper.
         matches_mask = [[0,0] for i in xrange(len(matches))]
         for i,(m,n) in enumerate(matches):
             for ratio_idx, ratio in enumerate(ratio_test_values):
                 if m.distance < ratio * n.distance:
-                    matches_mask[i] = [1,0]
-                    keypoint_matches[ratio_idx].append((m.queryIdx, m.trainIdx))
+                    if m.trainIdx not in smallest_distances[ratio_idx]:
+                      smallest_distances[ratio_idx][m.trainIdx] = (m.distance, m.queryIdx)
+                      matches_mask[i] = [1,0]
+                      keypoint_matches[ratio_idx].append((m.queryIdx, m.trainIdx))
+                    else:
+                      old_dist, old_queryIdx = smallest_distances[ratio_idx][m.trainIdx]
+                      if m.distance < old_dist:
+                        old_distance, old_queryIdx = smallest_distances[ratio_idx][m.trainIdx]
+                        smallest_distances[ratio_idx][m.trainIdx] = (m.distance, m.queryIdx)
+                        matches_mask[i] = [1,0]
+                        keypoint_matches[ratio_idx].remove((old_queryIdx, m.trainIdx))
+                        keypoint_matches[ratio_idx].append((m.queryIdx, m.trainIdx))
     else:
         keypoint_matches = [[]]
         matches_mask = []

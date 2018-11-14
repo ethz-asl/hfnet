@@ -33,7 +33,6 @@ def db_image_name_dict(db_file):
         image_id = row[0]
         camera_id = row[0]
         name = row[2]
-        print name
         image_name_to_id_and_camera_id[name] = (image_id, camera_id)
 
     cursor.close()
@@ -98,11 +97,14 @@ def main():
     num_images = 0
 
     for line in f:
-      if line_num == 0 or line_num == 1:
-          pass
-      elif line_num == 2:
-           total_num_images = int(line)
+      if line_num == 0 or not line:
+          line_num += 1
+          continue
       else:
+          if total_num_images==0:
+              total_num_images = int(line)
+              line_num += 1
+              continue
           data = line.split(' ')
           process(data, image_name_to_id_and_camera_id, connection)
           num_images += 1

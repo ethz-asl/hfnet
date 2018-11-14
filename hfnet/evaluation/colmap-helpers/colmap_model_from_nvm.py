@@ -126,10 +126,11 @@ def main():
     outfile = open(os.path.join(args.output_dir, "images.txt"), "w")
 
     for line in f:
-      if line_num == 0 or line_num == 1:
+      if line == '\n' or line.startswith('NVM_V3'):
           pass
-      elif line_num == 2:
+      elif len(line.split()) == 1:
            total_num_images = int(line)
+           print 'Num images', total_num_images
       else:
           data = line.split(' ')
           process(data, name_to_image_id, outfile)
