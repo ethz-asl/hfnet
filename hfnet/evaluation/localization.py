@@ -78,7 +78,7 @@ class Localization:
             globaldb_names, global_descriptors = pickle.load(f)
             assert isinstance(globaldb_names[0], str)
             name_to_id = {name: i for i, name in enumerate(globaldb_names)}
-            mapping = np.array([name_to_id[n] for n in self.names])
+            mapping = np.array([name_to_id[n] for n in self.db_names])
             global_descriptors = global_descriptors[mapping]
         with open(local_path, 'rb') as f:
             local_db = pickle.load(f)
