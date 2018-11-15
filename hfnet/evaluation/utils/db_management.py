@@ -36,9 +36,10 @@ def descriptors_from_colmap_db(cursor, image_id):
 
 
 def keypoints_from_colmap_db(cursor, image_id):
-    cursor.execute(f'SELECT data FROM keypoints WHERE image_id="{image_id}";')
-    blob, = next(cursor)
-    kpts = np.frombuffer(blob, dtype=np.float32).reshape(-1, 4)
+    cursor.execute(
+        f'SELECT cols, data FROM keypoints WHERE image_id="{image_id}";')
+    cols, blob = next(cursor)
+    kpts = np.frombuffer(blob, dtype=np.float32).reshape(-1, cols)
     return kpts
 
 
@@ -109,15 +110,24 @@ def build_localization_dbs(db_ids, images, cameras,
     return global_descriptors, local_db
 
 
-def read_query_list(path):
+def read_query_list(path, prefix=''):
     queries = []
     with open(path, 'r') as f:
         for line in f.readlines():
-            name, model, w, h, f, px, py, dist = line.split()
-            assert model == 'SIMPLE_RADIAL', line
-            K = np.array([[float(f), 0, float(px)],
-                          [0, float(f), float(py)],
+            data = line.split()
+            (name, model, w, h), params = data[:4], data[4:]
+            if model == 'SIMPLE_RADIAL':
+                f, px, py, dist = params
+                fx = fy = f
+            elif model == 'PINHOLE':
+                fx, fy, px, py = params
+                dist = 0.0
+            else:
+                raise(ValueError, f'Unknown camera model: {model}')
+            K = np.array([[float(fx), 0, float(px)],
+                          [0, float(fy), float(py)],
                           [0, 0, 1]])
+            name = str(Path(prefix, name))
             query = QueryInfo(name, model, int(w), int(h), K, float(dist))
             queries.append(query)
     return queries
@@ -143,6 +153,8 @@ def extract_query(data, info, config_global, config_local):
         db_query_name = info.name
         if config_local.get('broken_db', False):
             db_query_name = db_query_name.replace('jpg', 'png')
+        if config_local.get('broken_paths', False):
+            db_query_name = 'images/' + db_query_name
         query_id, = next(cursor.execute(
             f'SELECT image_id FROM images WHERE name="{db_query_name}";'))
         kpts = keypoints_from_colmap_db(cursor, query_id)[:, :2]

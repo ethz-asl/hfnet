@@ -4,7 +4,6 @@ from pathlib import Path
 import pickle
 from scipy.spatial import cKDTree
 import sys
-import yaml
 from tqdm import tqdm
 
 from hfnet.datasets import get_dataset
@@ -30,6 +29,7 @@ class Localization:
         self.cameras, self.images, self.points = read_model(
             path=Path(base_path, 'models', model_name).as_posix(), ext='.bin')
         self.db_ids = np.array(list(self.images.keys()))
+        self.db_names = [self.images[i].name for i in self.db_ids]
 
         # Statistics for debugging
         kpts_per_image = np.median(np.array(
@@ -65,7 +65,7 @@ class Localization:
                     config_local=None if ok_local else config['local'])
                 if not ok_global:
                     with open(global_path, 'wb') as f:
-                        pickle.dump((self.db_ids, global_descriptors), f)
+                        pickle.dump((self.db_names, global_descriptors), f)
                 if not ok_local:
                     with open(local_path, 'wb') as f:
                         pickle.dump(local_db, f)
@@ -75,24 +75,11 @@ class Localization:
 
         logging.info('Importing global and local databases')
         with open(global_path, 'rb') as f:
-            globaldb_ids, global_descriptors = pickle.load(f)
-
-        # Sometimes the ids in the new model and in the original model differ
-        # A mapping has to be generated in the models directory
-        if not np.all(np.array(globaldb_ids) == self.db_ids):
-            if not np.all(np.unique(self.db_ids) == np.unique(globaldb_ids)):
-                logging.info('Model ids and globaldb ids do not match, '
-                             'looking for mapping file.')
-                with open(Path(base_path, 'models/name2id.yaml'), 'r') as f:
-                    name2originalid = yaml.load(f)
-                original_ids = [
-                    name2originalid[self.images[i].name] for i in self.db_ids]
-                originalid2newid = {
-                    o: n for o, n in zip(original_ids, self.db_ids)}
-                globaldb_ids = [originalid2newid[i] for i in globaldb_ids]
-            global_descriptors = global_descriptors[
-                np.array([globaldb_ids.index(i) for i in self.db_ids])]
-        assert np.all(np.sort(self.db_ids) == np.sort(globaldb_ids))
+            globaldb_names, global_descriptors = pickle.load(f)
+            assert isinstance(globaldb_names[0], str)
+            name_to_id = {name: i for i, name in enumerate(globaldb_names)}
+            mapping = np.array([name_to_id[n] for n in self.names])
+            global_descriptors = global_descriptors[mapping]
         with open(local_path, 'rb') as f:
             local_db = pickle.load(f)
 
@@ -107,9 +94,10 @@ class Localization:
         self.dataset_name = dataset_name
         self.config = config
 
-    def init_queries(self, query_file, query_config):
-        queries = read_query_list(Path(self.base_path, query_file))
-        Dataset = get_dataset(self.dataset_name)
+    def init_queries(self, query_file, query_config, prefix=''):
+        queries = read_query_list(
+            Path(self.base_path, query_file), prefix=prefix)
+        Dataset = get_dataset(query_config.get('name', self.dataset_name))
         query_config = {
             **query_config, 'image_names': [q.name for q in queries]}
         query_dataset = Dataset(**query_config)
