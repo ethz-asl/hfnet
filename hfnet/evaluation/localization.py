@@ -104,20 +104,24 @@ class Localization:
         import _hfnetcpp
         self.cpp_backend = _hfnetcpp.HfNet()
         id_to_idx = {}
-        for i in self.db_ids:
+        old_to_new_kpt = {}
+        for idx, i in enumerate(self.db_ids):
+            #logging.info('Adding image %s', idx)
             item = self.local_db[i]
-            keypoints = item.keypoints.T.astype(np.float32)
-            local_desc = item.local_desc.T.astype(np.float32)
-            global_desc = item.global_desc.astype(np.float32)
+            keypoints = item.keypoints.T.astype(np.float32).copy()
+            local_desc = item.descriptors.T.astype(np.float32).copy()
+            global_desc = self.global_descriptors[idx].astype(np.float32).copy()
             # keypoints are NOT undistorted or nomalized
             idx = self.cpp_backend.addImage(global_desc, keypoints, local_desc)
             id_to_idx[i] = idx
+            old_to_new_kpt[i] = {k: j for j, k in enumerate(np.where(self.images[i].point3D_ids>=0)[0])}
         for i, point in self.points.items():
             observations = np.array([
-                [id_to_idx(im_id), kpt_id]
-                for im_id, kpt_id in zip(point.image_ids, point.point2D_idxs)])
+                [id_to_idx[im_id], old_to_new_kpt[im_id][kpt_id]]
+                for im_id, kpt_id in zip(point.image_ids, point.point2D_idxs)], dtype=np.int32)
             self.cpp_backend.add3dPoint(
-                point.xyz.astype(np.float32), observations)
+                point.xyz.astype(np.float32).copy(), observations.copy())
+        self.cpp_backend.buildIndex()
 
     def init_queries(self, query_file, query_config, prefix=''):
         queries = read_query_list(
@@ -133,19 +137,25 @@ class Localization:
         global_desc = self.global_transform(
             query_item.global_desc[np.newaxis])[0].astype(np.float32)
         local_desc = self.local_transform(
-            query_item.local_desc).astype(np.float32)
+            query_item.local_desc).astype(np.float32).T.copy()
         keypoints = cv2.undistortPoints(
-            query_item.keypoints, query_info.K,
-            np.array([query_info.dist, 0, 0, 0]))
+            query_item.keypoints[np.newaxis], query_info.K,
+            np.array([query_info.dist, 0, 0, 0]))[0].astype(np.float32).T.copy()
 
-        success, num_components_tested, num_inliers, num_iters, \
-            global_ms, covis_ms, local_ms, pnp_ms = self.cpp_backend.localize(
-                global_desc, keypoints, local_desc)
+        logging.info('Localizing image %s', query_info.name)
+        success, num_components_total, num_components_tested, last_component_size, num_db_landmarks, num_matches, \
+            num_inliers, num_iters, \
+        global_ms, covis_ms, local_ms, pnp_ms = self.cpp_backend.localize(
+               global_desc, keypoints, local_desc)
 
         result = LocResult(success, num_inliers, 0, np.eye(4))
         stats = {
             'success': success,
-            'num_components': num_components_tested,
+            'num_components_total': num_components_total,
+            'num_components_tested': num_components_tested,
+            'last_component_size': last_component_size,
+            'num_db_landmarks': num_db_landmarks,
+            'num_matches': num_matches,
             'num_inliers': num_inliers,
             'num_ransac_iters': num_iters,
             'timings': {
@@ -166,7 +176,7 @@ class Localization:
         query_item = extract_query(
             query_data, query_info, config_global, config_local)
 
-        if self.config['use_cpp']:
+        if self.config.get('use_cpp', False):
             assert not debug
             return self.localize_cpp(query_info, query_item)
 

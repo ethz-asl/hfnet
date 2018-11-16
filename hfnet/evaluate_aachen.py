@@ -133,6 +133,7 @@ if __name__ == '__main__':
         'model': args.model,
         'max_iter': args.max_iter,
         'queries': args.queries,
+        'use_cpp': True,
     }
     logging.info(f'Configuration: \n'+pformat(config))
 

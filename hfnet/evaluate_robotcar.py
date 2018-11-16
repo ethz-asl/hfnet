@@ -100,6 +100,7 @@ if __name__ == '__main__':
         'model': args.model,
         'max_iter': args.max_iter,
         'queries': args.queries,
+        'use_cpp': True,
     }
     logging.info('Evaluating Robotcar with configuration: \n'+pformat(config))
     loc = Localization('robotcar', args.model, config, build_db=args.build_db)
