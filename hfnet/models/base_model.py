@@ -39,7 +39,7 @@ class BaseModel(metaclass=ABCMeta):
     """
     dataset_names = set(['training', 'validation', 'test'])
     required_baseconfig = ['batch_size', 'learning_rate']
-    _default_config = {'eval_batch_size': 1}
+    _default_config = {'eval_batch_size': 1, 'learning_rate_step': None}
 
     @abstractmethod
     def _model(self, inputs, mode, **config):
