@@ -5,6 +5,9 @@ from tqdm import tqdm
 import itertools
 
 
+from hfnet.utils.tools import dict_update
+
+
 class Mode:
     TRAIN = 'train'
     EVAL = 'eval'
@@ -102,9 +105,9 @@ class BaseModel(metaclass=ABCMeta):
         self.name = self.__class__.__name__.lower()  # get child name
 
         # Update config
-        self.config = self._default_config
-        self.config.update(getattr(self, 'default_config', {}))
-        self.config.update(config)
+        self.config = dict_update(
+            self.default_config, getattr(self, 'default_config', {}))
+        self.config = dict_update(self.config, config)
 
         required = getattr(self, 'required_config_keys', [])
         if self.datasets:
@@ -193,7 +196,25 @@ class BaseModel(metaclass=ABCMeta):
 
             # Create optimizer ops
             self.global_step = tf.Variable(0, trainable=False, name='global_step')
-            opt = tf.train.RMSPropOptimizer(self.config['learning_rate'])
+            lr_val = self.config['learning_rate']
+            lr_step = self.config['learning_rate_step']
+            if isinstance(lr_step, list):
+                assert isinstance(lr_val, list)
+                tf.logging.info(f'Using piecewise learning rate {lr_val}'
+                             f' at iterations {lr_step}')
+                learning_rate = tf.train.piecewise_constant(
+                    self.global_step, lr_step, lr_val)
+            elif lr_step is not None:
+                tf.logging.info('Using exponentially decayed learning rate'
+                                f' with value {lr_val:.2E} and step {lr_step}')
+                learning_rate = tf.train.exponential_decay(
+                    lr_val, self.global_step, lr_step,
+                    self.config.get('learning_rate_decay', 0.1), staircase=True)
+            else:
+                tf.logging.info(
+                    f'Using constant learning rate with value {lr_val:.2E}')
+                learning_rate = lr_val
+            opt = tf.train.RMSPropOptimizer(learning_rate)
             with tf.control_dependencies(update_ops):
                 self.trainer = opt.apply_gradients(
                         gradvars, global_step=self.global_step)
@@ -368,8 +389,6 @@ class BaseModel(metaclass=ABCMeta):
         restored = []
         with tf.variable_scope('', reuse=True):
             for name in found_names:
-                # print(tf.global_variables())
-                # print(name, name in model_names, name in checkpoint_names)
                 var = tf.get_variable(name)
                 var_shape = var.get_shape().as_list()
                 if var_shape == saved_shapes[name]:
