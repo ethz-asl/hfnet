@@ -28,9 +28,8 @@ def delf_attention(feature_map, config, is_training, arg_scope=None):
     return descriptor
 
 
-def vlad(feature_map, config, is_training):
+def vlad(feature_map, config, training, mask=None):
     with tf.variable_scope('vlad'):
-        training = config['train_vlad'] and is_training
         if config['intermediate_proj']:
             with slim.arg_scope([slim.conv2d, slim.batch_norm], trainable=training):
                 with slim.arg_scope([slim.batch_norm], is_training=training):
@@ -56,6 +55,8 @@ def vlad(feature_map, config, is_training):
                 initializer=slim.initializers.xavier_initializer(), trainable=training)
         residuals = clusters - tf.expand_dims(feature_map, axis=3)
         residuals *= tf.expand_dims(memberships, axis=-1)
+        if mask is not None:
+            residuals *= tf.to_float(mask)[..., tf.newaxis, tf.newaxis]
         descriptor = tf.reduce_sum(residuals, axis=[1, 2])
 
         descriptor = tf.nn.l2_normalize(descriptor, axis=1)  # intra-normalization
