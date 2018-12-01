@@ -13,7 +13,7 @@ class Mobilenetvlad(BaseModel):
     required_config_keys = []
     default_config = {
             'depth_multiplier': 1.0,
-            'resize_input': False,
+            'tile_image_if_grayscale': False,
             'dropout_keep_prob': None,
             'encoder_endpoint': 'layer_18',
             'intermediate_proj': None,
@@ -27,12 +27,9 @@ class Mobilenetvlad(BaseModel):
 
     def _model(self, inputs, mode, **config):
         image = image_normalization(inputs['image'])
-        if image.shape[-1] == 1:
-            image = tf.tile(image, [1, 1, 1, 3])
-        if config['resize_input']:
-            new_size = tf.to_int32(tf.round(
-                    tf.to_float(tf.shape(image)[1:3]) / float(config['resize_input'])))
-            image = tf.image.resize_images(image, new_size)
+        if config['tile_image_if_grayscale']:
+            if image.shape[-1] == 1:
+                image = tf.tile(image, [1, 1, 1, 3])
 
         is_training = config['train_backbone'] and (mode == Mode.TRAIN)
         with slim.arg_scope(mobilenet.training_scope(
@@ -47,12 +44,14 @@ class Mobilenetvlad(BaseModel):
 
         ret = {'global_descriptor': descriptor}
         if config['local_descriptor_layer']:
-            ret['local_descriptor_map'] = encoder[config['local_descriptor_layer']]
+            desc = encoder[config['local_descriptor_layer']]
+            ret['local_descriptor_map'] = tf.nn.l2_normalize(desc, axis=-1)
         return ret
 
     def _descriptor_l2_error(self, inputs, outputs):
-        return tf.reduce_sum(tf.square(inputs['descriptor'] - outputs['descriptor']),
-                             axis=-1)/2
+        dist = tf.square(inputs['global_descriptor']
+                         - outputs['global_descriptor'])
+        return tf.reduce_sum(dist, axis=-1)/2
 
     def _loss(self, outputs, inputs, **config):
         return tf.reduce_mean(self._descriptor_l2_error(inputs, outputs))
