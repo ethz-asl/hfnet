@@ -38,11 +38,11 @@ def draw_matches(img1, kp1, img2, kp2, matches, color=None, kp_radius=5,
             img1.shape[1]+margin:img1.shape[1]+img2.shape[1]+margin] = img2
 
     # Draw lines between matches
-    if color:
-        c = color
-    for m in matches:
+    if not isinstance(color, list):
+        color = [color]*len(matches)
+    for m, c in zip(matches, color):
         # Generate random color for RGB/BGR and grayscale images as needed.
-        if not color:
+        if not c:
             if len(img1.shape) == 3:
                 c = np.random.randint(0, 256, 3)
             else:
