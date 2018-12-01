@@ -60,7 +60,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('index_file', type=str, help='csv index file')
     parser.add_argument('--output_dir', action='store', type=str,
-                        default=str(Path(DATA_PATH, 'google_landmarks')),
+                        default=str(Path(DATA_PATH, 'google_landmarks/images')),
                         help='output directory')
     parser.add_argument('--truncate', action='store', default=None, type=int)
     parser.add_argument('--num_cpus', action='store', default=5, type=int)
