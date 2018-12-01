@@ -1,8 +1,6 @@
 data:
-    name: 'aachen'
-    load_db: false
-    load_queries: true
-    resize_max: 960
+    name: 'hpatches'
+    alteration: 'all'
 model:
     name: 'netvlad_original'
     local_descriptor_layer: 'conv3_3'

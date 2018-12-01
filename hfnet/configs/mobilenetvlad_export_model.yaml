@@ -1,0 +1,9 @@
+model:
+    name: 'mobilenetvlad'
+    local_descriptor_layer: 'layer_7'
+    image_channels: 1
+    depth_multiplier: 0.35
+    dimensionality_reduction: 4096
+    dropout_keep_prob: null
+    intermediate_proj: 0
+    n_clusters: 32

@@ -3,8 +3,8 @@ data:
     load_db: true
     load_queries: true
     resize_max: 960
+    grayscale: true
 model:
-    name: 'super_point'
-    nms: 0
-    detection_threshold: 0.005
+    name: 'mobilenetvlad'
+    local_descriptor_layer: 'layer_7'
     image_channels: 1

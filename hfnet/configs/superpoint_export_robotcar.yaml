@@ -1,7 +1,6 @@
 data:
-    name: 'aachen'
-    load_db: true
-    load_queries: true
+    name: 'robotcar'
+    sequences: ['overcast-reference', 'sun', 'dusk', 'night', 'night-rain']
     resize_max: 960
 model:
     name: 'super_point'

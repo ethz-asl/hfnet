@@ -10,4 +10,3 @@ model:
     name: 'mobilenetvlad'
     local_descriptor_layer: 'layer_7'
     image_channels: 1
-weights: null

@@ -8,6 +8,6 @@ data:
         'st_pauls_cathedral', 'united_states_capitol']
 model:
     name: 'doap'
-    weights: 'DOAP/Liberty_ST_128d.mat'
+    weights: 'DOAP/HPatches_ST_LM_128d.mat'
     image_channels: 1
 weights: ''

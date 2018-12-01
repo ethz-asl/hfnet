@@ -5,6 +5,4 @@ model:
     name: 'super_point'
     nms: 0
     detection_threshold: 0.01
-    keep_top_k: 500
     image_channels: 1
-weights: null
