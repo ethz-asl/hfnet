@@ -153,9 +153,6 @@ def do_pnp(kpts, lms, query_info, config):
         num_inliers = len(inliers)
         inlier_ratio = len(inliers) / len(kpts)
         success &= num_inliers >= config['min_inliers']
-        success &= inlier_ratio >= config['min_inlier_ratio']
-        if config['additional_min_inliers']:
-            success |= num_inliers >= config['additional_min_inliers']
 
         ret, R_vec, t = cv2.solvePnP(
                 lms[inliers], kpts[inliers], query_info.K,

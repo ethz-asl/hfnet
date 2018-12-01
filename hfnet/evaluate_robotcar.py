@@ -6,7 +6,6 @@ import yaml
 import numpy as np
 from pyquaternion import Quaternion
 
-# import hfnet
 from hfnet.evaluation.localization import Localization, evaluate
 from hfnet.evaluation.loaders import export_loader
 from hfnet.settings import EXPER_PATH
@@ -71,8 +70,6 @@ configs_local = {
 config_pose = {
     'reproj_error': 12,
     'min_inliers': 15,
-    'min_inlier_ratio': 0.15,
-    'additional_min_inliers': 15,
 }
 
 config_robotcar = {

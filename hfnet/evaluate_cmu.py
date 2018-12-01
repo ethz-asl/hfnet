@@ -69,9 +69,7 @@ configs_local = {
 
 config_pose = {
     'reproj_error': 5,
-    'min_inliers': 15,
-    'min_inlier_ratio': 0.15,
-    'additional_min_inliers': 12,
+    'min_inliers': 12,
 }
 
 config_cmu = {

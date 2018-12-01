@@ -6,7 +6,6 @@ import yaml
 import numpy as np
 from pyquaternion import Quaternion
 
-# import hfnet
 from hfnet.evaluation.localization import Localization, evaluate
 from hfnet.evaluation.loaders import export_loader
 from hfnet.settings import EXPER_PATH
@@ -23,8 +22,8 @@ configs_global = {
         'num_prior': 10,
     },
     'mnv': {
-        'db_name': 'globaldb_mnv0.75_aug-photo_lrsteps.pkl',
-        'experiment': 'mobilenetvlad_d0.75_glm185k_aug-photo_lrsteps/aachen',
+        'db_name': 'globaldb_mnv0.35.pkl',
+        'experiment': 'mobilenetvlad_depth-0.35/aachen_resize-960_layer-7',
         'predictor': export_loader,
         'has_keypoints': False,
         'has_descriptors': False,
@@ -103,9 +102,7 @@ configs_local = {
 
 config_pose = {
     'reproj_error': 10,
-    'min_inliers': 15,
-    'min_inlier_ratio': 0.15,
-    'additional_min_inliers': 12,
+    'min_inliers': 12,
 }
 
 config_aachen = {
