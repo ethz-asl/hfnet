@@ -1,0 +1,68 @@
+data:
+    name: 'distillation'
+    image_dirs: ['google_landmarks/images',
+                 'bdd/dawn_images_vga', 'bdd/night_images_vga']
+    load_targets: True
+    targets:
+        - dir: 'global_descriptors'
+          keys: ['global_descriptor']
+        - dir: 'superpoint_predictions'
+          keys: ['local_descriptor_map', 'dense_scores']
+    validation_size: 192
+    truncate: [185000, null, null]
+    preprocessing:
+        resize: [480, 640]
+        grayscale: true
+    augmentation:
+        photometric:
+            enable: true
+            primitives: [
+                'random_brightness', 'random_contrast',
+                'additive_gaussian_noise', 'additive_shade', 'motion_blur']
+            params:
+                random_brightness: {delta_range: [-30., 40.]}
+                random_contrast: {strength_range: [0.3, 1.2]}
+                additive_gaussian_noise: {stddev_range: [0, 10]}
+                additive_speckle_noise: {prob_range: [0, 0.0035]}
+                additive_shade:
+                    transparency_range: [-0.5, 0.5]
+                    kernel_size_range: [100, 150]
+                    prob: 0.5
+                motion_blur: {kernel_size: [13, 21], prob: 0.1}
+        homographic:
+            enable: false
+            params:
+                translation: true
+                rotation: true
+                scaling: true
+                perspective: true
+                scaling_amplitude: 0.2
+                perspective_amplitude_x: 0.3
+                perspective_amplitude_y: 0.3
+                patch_ratio: 0.9
+                max_angle: 0.3
+                allow_artifacts: true
+            valid_border_margin: 9
+model:
+    name: 'hf_net_shared'
+    image_channels: 1
+    depth_multiplier: 0.75
+    dropout_keep_prob: null
+    global:
+        intermediate_proj: 0
+        dimensionality_reduction: 4096
+        n_clusters: 32
+    local:
+        descriptor_dim: 256
+    #loss_weights: {local_desc: 1, global_desc: 1, detector: 1}
+    loss_weights: 'uncertainties'
+    train_backbone: true
+    batch_size: 16
+    eval_batch_size: 16
+    learning_rate: [0.001, 0.0001, 0.00001]
+    learning_rate_step: [60000, 80000]
+weights: 'mobilenet_v2_0.75_224/mobilenet_v2_0.75_224.ckpt'
+train_iter: 85000
+validation_interval: 500
+save_interval: 5000
+keep_checkpoints: 100
