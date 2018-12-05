@@ -96,6 +96,7 @@ def evaluate(data_iter, config, is_2d=True):
     iterations = 0
     num_kpts = []
     pose_errors = []
+    pose_correctness = []
     matching_scores = []
     all_tp = []
     all_num_gt = 0
@@ -131,6 +132,8 @@ def evaluate(data_iter, config, is_2d=True):
                 pred1['keypoints'], pred2['keypoints'], matches1, shape2,
                 data['homography'])
             error = {'homography': error_H}
+            correct = ((error_H < config['correct_H_thresh'])
+                       if error_H is not None else False)
         else:
             kpts1_w, vis1, kpts1_3d_1 = keypoints_warp_3D(
                 pred1['keypoints'], data['depth'], data['K'],
@@ -145,7 +148,13 @@ def evaluate(data_iter, config, is_2d=True):
                 pred1['keypoints'], kpts2_3d_2, matches1, vis1, vis2,
                 data['1_T_2'], data['K'], config['correct_match_thresh'])
             error = {'translation': error_t, 'rotation': error_R}
+            if error_t is not None and error_R is not None:
+                correct = ((error_t <= config['correct_trans_thresh'])
+                           & (error_R <= config['correct_rot_thresh']))
+            else:
+                correct = False
 
+        pose_correctness.append(correct)
         pose_errors.append(error)
 
         matching_score = compute_matching_score(
@@ -173,6 +182,7 @@ def evaluate(data_iter, config, is_2d=True):
     metrics = {
         'average_num_keypoints': np.mean(num_kpts),
         'matching_score': np.mean(matching_scores),
+        'pose_correctness': np.mean(pose_correctness),
         'mAP': mAP,
     }
     return metrics, precision, recall, distances, pose_recalls
