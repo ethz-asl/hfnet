@@ -73,7 +73,9 @@ class Colmap(BaseDataset):
                 id_mapping[id] = i
                 name = Path(info.name).stem
                 K = cameras[id].params
-                K = np.array([[K[0], 0, K[2]], [0, K[1], K[3]], [0, 0, 1]])
+                K = np.array([[K[0], 0, K[2]-0.5],
+                              [0, K[1], K[3]-0.5],
+                              [0, 0, 1]])
                 T = np.eye(4)
                 T[:3, :3] = qvec2rotmat(info.qvec)
                 T[:3, 3] = info.tvec*scale
