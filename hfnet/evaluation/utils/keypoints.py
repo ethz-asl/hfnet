@@ -22,25 +22,12 @@ def nms_fast(kpts, scores, shape, dist_thresh=4):
     pad = dist_thresh
     grid = np.pad(grid, [[pad]*2]*2, mode='constant')
 
-    # scoremap = np.zeros_like(grid, dtype=np.float)
-    # scoremap[tuple(kpts.T+pad)[::-1]] = scores
-    offsets = np.zeros((len(kpts_sorted), 2))
-    # xgrid, ygrid = np.meshgrid(*[np.arange(pad*2+1)]*2)
-    # xgrid -= pad
-    # ygrid -= pad
-
     # Iterate through points, highest to lowest conf, suppress neighborhood.
     for i, k in enumerate(kpts_sorted):
         pt = (k[0]+pad, k[1]+pad)
         if grid[pt[1], pt[0]] == 1:
             grid[pt[1]-pad:pt[1]+pad+1, pt[0]-pad:pt[0]+pad+1] = 0
             grid[pt[1], pt[0]] = -1
-
-            # s = (slice(pt[1]-pad, pt[1]+pad+1, 1),
-                 # slice(pt[0]-pad, pt[0]+pad+1, 1))
-            # offx = (scoremap[s]*xgrid).sum() / scoremap[s].sum()
-            # offy = (scoremap[s]*ygrid).sum() / scoremap[s].sum()
-            # offsets[inds[k[1], k[0]]] = np.array([offx, offy])
 
     keepy, keepx = np.where(grid == -1)
     keepy, keepx = keepy - pad, keepx - pad
@@ -49,8 +36,7 @@ def nms_fast(kpts, scores, shape, dist_thresh=4):
 
     inds2 = np.argsort(-scores_keep)
     out_inds = inds1[inds_keep[inds2]]
-    out_offsets = offsets[inds_keep[inds2]]
-    return out_inds, out_offsets
+    return out_inds
 
 
 def keypoints_cv2np(kpts_cv):

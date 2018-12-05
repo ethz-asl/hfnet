@@ -73,7 +73,6 @@ def export_loader(image, name, experiment, **config):
     do_nms = config.get('do_nms', False)
     nms_thresh = config.get('nms_thresh', 4)
     keypoint_refinement = config.get('keypoint_refinement', False)
-    nms_refinement = config.get('nms_refinement', False)
     binarize = config.get('binarize', False)
     entries = ['keypoints', 'scores', 'descriptors']
 
@@ -97,12 +96,10 @@ def export_loader(image, name, experiment, **config):
             pred = {**pred,
                     **{k: v[mask] for k, v in pred.items() if k in entries}}
         if do_nms:
-            keep, offsets = nms_fast(
+            keep = nms_fast(
                 pred['keypoints'], pred['scores'], image_shape, nms_thresh)
             pred = {**pred,
                     **{k: v[keep] for k, v in pred.items() if k in entries}}
-            if nms_refinement:
-                pred['keypoints'] = pred['keypoints'] + offsets
         if keypoint_refinement:
             criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER,
                         30, 0.001)
