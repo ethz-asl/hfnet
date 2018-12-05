@@ -52,9 +52,11 @@ def sample_descriptors(descriptor_map, keypoints, image_shape,
 
     if input_shape is not None:
         input_shape = np.array(input_shape)
-        factor = image_shape / input_shape * fix(input_shape / desc_shape)
+        factor = image_shape / input_shape
+        effective_input_shape = desc_shape * fix(input_shape / desc_shape)
+        factor = factor * (effective_input_shape - 1) / (desc_shape - 1)
     else:
-        factor = image_shape / desc_shape
+        factor = (image_shape - 1) / (desc_shape - 1)
 
     desc = sample_bilinear(descriptor_map, keypoints/factor[::-1])
     desc = normalize(desc, axis=1)
