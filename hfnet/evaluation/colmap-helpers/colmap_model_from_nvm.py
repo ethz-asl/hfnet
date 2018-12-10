@@ -80,6 +80,11 @@ def process(nvm_data, name_to_image_id,outfile):
     # q -> data[2], data[3], data[4], data[5]
     # p -> data[6], data[7], data[8]
 
+    if nvm_data[0].endswith('.png'):
+        nvm_data[0] = os.path.splitext(nvm_data[0])[0] + '.jpg'
+    if nvm_data[0].startswith('./'):
+        nvm_data[0] = nvm_data[0][2:]
+
     assert(nvm_data[0] in name_to_image_id), nvm_data[0]
     image_id = name_to_image_id[nvm_data[0]][0]
 
@@ -121,10 +126,11 @@ def main():
     outfile = open(os.path.join(args.output_dir, "images.txt"), "w")
 
     for line in f:
-      if line_num == 0 or line_num == 1:
+      if line == '\n' or line.startswith('NVM_V3'):
           pass
-      elif line_num == 2:
+      elif len(line.split()) == 1:
            total_num_images = int(line)
+           print 'Num images', total_num_images
       else:
           data = line.split(' ')
           process(data, name_to_image_id, outfile)

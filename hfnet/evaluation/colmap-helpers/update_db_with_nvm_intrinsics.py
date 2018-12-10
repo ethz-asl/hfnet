@@ -1,6 +1,7 @@
 import argparse
 import numpy as np
 import sqlite3
+import os
 
 
 def parse_args():
@@ -64,7 +65,9 @@ def db_update_intrinsics(db_connection, camera_id, focal_length, radial_dist):
 
 
 def process(nvm_data, image_name_to_id_and_camera_id, db_connection):
-    image_filename = nvm_data[0]
+    image_filename = os.path.splitext(nvm_data[0])[0] + '.jpg'
+    if image_filename.startswith("./"):
+      image_filename = image_filename[2:]
     focal_length = float(nvm_data[1])
     radial_dist = float(nvm_data[9])
 
@@ -94,11 +97,14 @@ def main():
     num_images = 0
 
     for line in f:
-      if line_num == 0 or line_num == 1:
-          pass
-      elif line_num == 2:
-           total_num_images = int(line)
+      if line_num == 0 or not line:
+          line_num += 1
+          continue
       else:
+          if total_num_images==0:
+              total_num_images = int(line)
+              line_num += 1
+              continue
           data = line.split(' ')
           process(data, image_name_to_id_and_camera_id, connection)
           num_images += 1

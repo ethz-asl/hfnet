@@ -76,7 +76,7 @@ def get_ocv_kpts_from_np(numpy_keypoints):
 
 
 def match_frames(path_npz1, path_npz2, path_image1, path_image2, num_points,
-                 use_ratio_test, debug):
+                 use_ratio_test, ratio_test_values, debug):
     frame1 = np.load(path_npz1)
     frame2 = np.load(path_npz2)
 
@@ -87,18 +87,32 @@ def match_frames(path_npz1, path_npz2, path_image1, path_image2, num_points,
     des1 = frame1['descriptors'].astype('float32')[:num_points,:]
     des2 = frame2['descriptors'].astype('float32')[:num_points,:]
 
-    keypoint_matches = []
     if use_ratio_test:
+        keypoint_matches = [[] for i in ratio_test_values]
         matcher = cv2.BFMatcher(cv2.NORM_L2)
         matches = matcher.knnMatch(des1, des2, k=2)
+
+        smallest_distances = [dict() for x in ratio_test_values]
 
         # Ratio test as per Lowe's paper.
         matches_mask = [[0,0] for i in xrange(len(matches))]
         for i,(m,n) in enumerate(matches):
-            if m.distance < 0.85*n.distance:
-                matches_mask[i] = [1,0]
-                keypoint_matches.append((m.queryIdx, m.trainIdx))
+            for ratio_idx, ratio in enumerate(ratio_test_values):
+                if m.distance < ratio * n.distance:
+                    if m.trainIdx not in smallest_distances[ratio_idx]:
+                      smallest_distances[ratio_idx][m.trainIdx] = (m.distance, m.queryIdx)
+                      matches_mask[i] = [1,0]
+                      keypoint_matches[ratio_idx].append((m.queryIdx, m.trainIdx))
+                    else:
+                      old_dist, old_queryIdx = smallest_distances[ratio_idx][m.trainIdx]
+                      if m.distance < old_dist:
+                        old_distance, old_queryIdx = smallest_distances[ratio_idx][m.trainIdx]
+                        smallest_distances[ratio_idx][m.trainIdx] = (m.distance, m.queryIdx)
+                        matches_mask[i] = [1,0]
+                        keypoint_matches[ratio_idx].remove((old_queryIdx, m.trainIdx))
+                        keypoint_matches[ratio_idx].append((m.queryIdx, m.trainIdx))
     else:
+        keypoint_matches = [[]]
         matches_mask = []
         matcher = cv2.BFMatcher(cv2.NORM_L2, crossCheck=True)
         matches = matcher.match(des1, des2)
@@ -106,7 +120,7 @@ def match_frames(path_npz1, path_npz2, path_image1, path_image2, num_points,
         # Matches are already cross-checked.
         for match in matches:
             # match.trainIdx belongs to des2.
-            keypoint_matches.append((match.queryIdx, match.trainIdx))
+            keypoint_matches[0].append((match.queryIdx, match.trainIdx))
 
     if debug:
         debug_matching(frame1, frame2, path_image1, path_image2, matches,
