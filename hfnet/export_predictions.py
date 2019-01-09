@@ -46,15 +46,18 @@ if __name__ == '__main__':
         if config.get('weights', None):
             checkpoint_path = Path(checkpoint_path, config['weights'])
     else:
-        assert 'weights' in config, (
-                'Experiment name not found, weights must be provided.')
-        checkpoint_path = Path(DATA_PATH, 'weights', config['weights'])
+        if config.get('weights', None):
+            checkpoint_path = Path(DATA_PATH, 'weights', config['weights'])
+        else:
+            checkpoint_path = None
+            logging.info('No weights provided.')
     logging.info(f'Starting export with configuration:\n{pformat(config)}')
 
     with get_model(config['model']['name'])(
             data_shape={'image': [None, None, None, config['model']['image_channels']]},
             **config['model']) as net:
-        net.load(str(checkpoint_path))
+        if checkpoint_path is not None:
+            net.load(str(checkpoint_path))
         dataset = get_dataset(config['data']['name'])(**config['data'])
         test_set = dataset.get_test_set()
 
