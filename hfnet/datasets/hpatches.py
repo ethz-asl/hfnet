@@ -12,6 +12,7 @@ class Hpatches(BaseDataset):
         'alteration': 'all',  # 'all', 'i' for illumination, 'v' for viewpoint
         'truncate': None,
         'make_pairs': False,
+        'hard': False,
         'shuffle': False,
         'random_seed': 0,
         'preprocessing': {
@@ -43,6 +44,8 @@ class Hpatches(BaseDataset):
                     if i == 1:
                         path2 = str(Path(path, '1' + self.image_ext))
                         name2 = path.stem + '/1'
+                        continue
+                    if config['hard'] and i < self.num_images:
                         continue
                     data['image2'].append(path2)
                     data['name2'].append(name2)
