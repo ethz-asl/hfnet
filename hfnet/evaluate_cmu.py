@@ -88,6 +88,7 @@ if __name__ == '__main__':
     parser.add_argument('--slice', type=str, required=True)
     parser.add_argument('--max_iter', type=int)
     parser.add_argument('--export_poses', action='store_true')
+    parser.add_argument('--cpp_backend', action='store_true')
     args = parser.parse_args()
 
     config = {
@@ -98,6 +99,7 @@ if __name__ == '__main__':
         'model': args.model,
         'max_iter': args.max_iter,
         'slice': args.slice,
+        'use_cpp': args.cpp_backend,
     }
     for i in ['local', 'global']:
         if 'experiment' in config[i]:

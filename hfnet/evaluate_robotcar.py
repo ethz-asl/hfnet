@@ -87,6 +87,7 @@ if __name__ == '__main__':
     parser.add_argument('--queries', type=str, default='dusk_left')
     parser.add_argument('--max_iter', type=int)
     parser.add_argument('--export_poses', action='store_true')
+    parser.add_argument('--cpp_backend', action='store_true')
     args = parser.parse_args()
 
     config = {
@@ -97,7 +98,7 @@ if __name__ == '__main__':
         'model': args.model,
         'max_iter': args.max_iter,
         'queries': args.queries,
-        'use_cpp': True,
+        'use_cpp': args.cpp_backend,
     }
     logging.info('Evaluating Robotcar with configuration: \n'+pformat(config))
     loc = Localization('robotcar', args.model, config, build_db=args.build_db)

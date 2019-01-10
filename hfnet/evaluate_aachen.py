@@ -120,6 +120,7 @@ if __name__ == '__main__':
     parser.add_argument('--queries', type=str, default='day_time')
     parser.add_argument('--max_iter', type=int)
     parser.add_argument('--export_poses', action='store_true')
+    parser.add_argument('--cpp_backend', action='store_true')
     args = parser.parse_args()
 
     config = {
@@ -130,7 +131,7 @@ if __name__ == '__main__':
         'model': args.model,
         'max_iter': args.max_iter,
         'queries': args.queries,
-        'use_cpp': True,
+        'use_cpp': args.cpp_backend,
     }
     logging.info(f'Configuration: \n'+pformat(config))
 

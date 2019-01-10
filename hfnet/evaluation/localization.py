@@ -5,8 +5,6 @@ import pickle
 from scipy.spatial import cKDTree
 import sys
 from tqdm import tqdm
-import cv2
-import yaml
 
 from hfnet.datasets import get_dataset
 from .utils import db_management
@@ -17,6 +15,7 @@ from .utils.localization import (
     covis_clustering, match_against_place, do_pnp, preprocess_globaldb,
     preprocess_localdb, loc_failure, LocResult)
 from hfnet.datasets.colmap_utils.read_model import read_model
+from .cpp_localization import CppLocalization
 from hfnet.utils.tools import Timer  # noqa: F401 (profiling)
 from hfnet.settings import DATA_PATH
 
@@ -96,32 +95,14 @@ class Localization:
         self.dataset_name = dataset_name
         self.config = config
 
-        self.use_cpp = config.get('use_cpp')
+        self.use_cpp = config.get('use_cpp', False)
         if self.use_cpp:
             self.init_cpp()
 
     def init_cpp(self):
-        import _hfnetcpp
-        self.cpp_backend = _hfnetcpp.HfNet()
-        id_to_idx = {}
-        old_to_new_kpt = {}
-        for idx, i in enumerate(self.db_ids):
-            #logging.info('Adding image %s', idx)
-            item = self.local_db[i]
-            keypoints = item.keypoints.T.astype(np.float32).copy()
-            local_desc = item.descriptors.T.astype(np.float32).copy()
-            global_desc = self.global_descriptors[idx].astype(np.float32).copy()
-            # keypoints are NOT undistorted or nomalized
-            idx = self.cpp_backend.addImage(global_desc, keypoints, local_desc)
-            id_to_idx[i] = idx
-            old_to_new_kpt[i] = {k: j for j, k in enumerate(np.where(self.images[i].point3D_ids>=0)[0])}
-        for i, point in self.points.items():
-            observations = np.array([
-                [id_to_idx[im_id], old_to_new_kpt[im_id][kpt_id]]
-                for im_id, kpt_id in zip(point.image_ids, point.point2D_idxs)], dtype=np.int32)
-            self.cpp_backend.add3dPoint(
-                point.xyz.astype(np.float32).copy(), observations.copy())
-        self.cpp_backend.buildIndex()
+        self.cpp_backend = CppLocalization(
+            self.db_ids, self.local_db, self.global_descriptors,
+            self.images, self.points)
 
     def init_queries(self, query_file, query_config, prefix=''):
         queries = read_query_list(
@@ -132,41 +113,6 @@ class Localization:
         query_dataset = Dataset(**query_config)
         return queries, query_dataset
 
-    def localize_cpp(self, query_info, query_item):
-        assert self.config['use_cpp']
-        global_desc = self.global_transform(
-            query_item.global_desc[np.newaxis])[0].astype(np.float32)
-        local_desc = self.local_transform(
-            query_item.local_desc).astype(np.float32).T.copy()
-        keypoints = cv2.undistortPoints(
-            query_item.keypoints[np.newaxis], query_info.K,
-            np.array([query_info.dist, 0, 0, 0]))[0].astype(np.float32).T.copy()
-
-        logging.info('Localizing image %s', query_info.name)
-        success, num_components_total, num_components_tested, last_component_size, num_db_landmarks, num_matches, \
-            num_inliers, num_iters, \
-        global_ms, covis_ms, local_ms, pnp_ms = self.cpp_backend.localize(
-               global_desc, keypoints, local_desc)
-
-        result = LocResult(success, num_inliers, 0, np.eye(4))
-        stats = {
-            'success': success,
-            'num_components_total': num_components_total,
-            'num_components_tested': num_components_tested,
-            'last_component_size': last_component_size,
-            'num_db_landmarks': num_db_landmarks,
-            'num_matches': num_matches,
-            'num_inliers': num_inliers,
-            'num_ransac_iters': num_iters,
-            'timings': {
-                'global': global_ms,
-                'covis': covis_ms,
-                'local': local_ms,
-                'pnp': pnp_ms,
-            }
-        }
-        return (result, stats)
-
     def localize(self, query_info, query_data, debug=False):
         config_global = self.config['global']
         config_local = self.config['local']
@@ -176,9 +122,13 @@ class Localization:
         query_item = extract_query(
             query_data, query_info, config_global, config_local)
 
-        if self.config.get('use_cpp', False):
+        # C++ backend
+        if self.use_cpp:
             assert not debug
-            return self.localize_cpp(query_info, query_item)
+            assert hasattr(self, 'cpp_backend')
+            return self.cpp_backend.localize(
+                query_info, query_item,
+                self.global_transform, self.local_transform)
 
         # Global matching
         global_desc = self.global_transform(
