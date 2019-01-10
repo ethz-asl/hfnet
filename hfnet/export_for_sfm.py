@@ -13,9 +13,8 @@ from hfnet.settings import EXPER_PATH  # noqa: E402
 
 
 def export_for_sfm(data_config, exper_config, export_name):
-    # export_name = exper_config['experiment']+'_sfm'
     export_dir = Path(EXPER_PATH, 'exports', export_name)
-    export_dir.mkdir()
+    export_dir.mkdir(exist_ok=True)
 
     dataset = get_dataset(data_config['name'])(**data_config)
     data_iter = dataset.get_test_set()
@@ -23,8 +22,12 @@ def export_for_sfm(data_config, exper_config, export_name):
     for data in tqdm(data_iter):
         predictions = exper_config['predictor'](
             data['image'], data['name'], **exper_config)
+        # Scale the keypoints to the original image size
+        # and convert to Colmap convention (origin = corner of upper left pix)
+        scale = ((np.array(data['original_size'][:2]) - 1)
+                 / (np.array(data['image'].shape[:2]) - 1))
         export = {
-            'keypoints': predictions['keypoints'],
+            'keypoints': scale[::-1] * predictions['keypoints'] + 0.5,
             'scores': predictions['scores'],
             'descriptors': predictions['descriptors'],
             'image_size': data['image'].shape[:2][::-1]
@@ -36,15 +39,31 @@ def export_for_sfm(data_config, exper_config, export_name):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    parser.add_argument('dataset', type=str)
     parser.add_argument('export_name', type=str)
     parser.add_argument('new_export_name', type=str)
     args = parser.parse_args()
 
-    data_config = {
-        'name': 'aachen',
-        'load_db': True,
-        'load_queries': False,
-        'resize_max': 960,
+    data_configs = {
+        'aachen': {
+            'name': 'aachen',
+            'load_db': True,
+            'load_queries': False,
+            'resize_max': 960,
+        },
+        'robotcar': {
+            'name': 'robotcar',
+            'sequences': ['overcast-reference'],
+            'resize_max': 960,
+        },
+        'cmu': {
+            'name': 'cmu',
+            'sequences': ['slice2', 'slice3', 'slice4', 'slice5', 'slice6',
+                          'slice7', 'slice8', 'slice9', 'slice10', 'slice17'],
+            'load_db': True,
+            'load_queries': False,
+            'resize_max': 1024,
+        }
     }
 
     exper_config = {
@@ -55,4 +74,5 @@ if __name__ == '__main__':
         'nms_thresh': 4,
     }
 
-    export_for_sfm(data_config, exper_config, args.new_export_name)
+    export_for_sfm(
+        data_configs[args.dataset], exper_config, args.new_export_name)
