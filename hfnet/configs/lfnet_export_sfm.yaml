@@ -1,0 +1,17 @@
+data:
+    name: 'sfm'
+    sequences: [
+        'british_museum', 'florence_cathedral_side',
+        'lincoln_memorial_statue', 'london_bridge',
+        'milan_cathedral', 'mount_rushmore',
+        'piazza_san_marco', 'reichstag', 'sagrada_familia',
+        'st_pauls_cathedral', 'united_states_capitol']
+    preprocessing:
+        upright: true
+model:
+    name: 'lf_net'
+    top_k: 1000
+    config: 'lf-net/release/models/outdoor/config.pkl'
+    #nms_ksize: 4
+    image_channels: 1
+weights: 'lf-net/release/models/outdoor/models-latest-42000'

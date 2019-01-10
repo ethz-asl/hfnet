@@ -1,0 +1,15 @@
+data:
+    name: 'sfm'
+    sequences: [
+        'british_museum', 'florence_cathedral_side',
+        'lincoln_memorial_statue', 'london_bridge',
+        'milan_cathedral', 'mount_rushmore',
+        'piazza_san_marco', 'reichstag', 'sagrada_familia',
+        'st_pauls_cathedral', 'united_states_capitol']
+    preprocessing:
+        upright: true
+model:
+    name: 'doap'
+    weights: 'DOAP/HPatches_ST_LM_128d.mat'
+    image_channels: 1
+weights: ''
