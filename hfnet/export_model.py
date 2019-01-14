@@ -1,10 +1,13 @@
+import logging
 import yaml
 import argparse
 from pathlib import Path
-import tensorflow as tf
+from pprint import pformat
 
 from hfnet.models import get_model
+from hfnet.utils import tools  # noqa: E402
 from hfnet.settings import EXPER_PATH, DATA_PATH
+import tensorflow as tf
 
 
 if __name__ == '__main__':
@@ -24,11 +27,15 @@ if __name__ == '__main__':
 
     if exper_name:
         assert Path(EXPER_PATH, exper_name).exists()
+        with open(Path(EXPER_PATH, exper_name, 'config.yml'), 'r') as f:
+            config['model'] = tools.dict_update(
+                yaml.load(f)['model'], config.get('model', {}))
         checkpoint_path = Path(EXPER_PATH, exper_name)
         if config.get('weights', None):
             checkpoint_path = Path(checkpoint_path, config['weights'])
     else:
         checkpoint_path = Path(DATA_PATH, 'weights', config['weights'])
+    logging.info(f'Exporting model with configuration:\n{pformat(config)}')
 
     with get_model(config['model']['name'])(
             data_shape={'image': [None, None, None,

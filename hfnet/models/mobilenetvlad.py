@@ -3,7 +3,7 @@ from tensorflow.contrib import slim
 
 from .base_model import BaseModel, Mode
 from .backbones import mobilenet_v2 as mobilenet
-from .layers import vlad, dimensionality_reduction, image_normalization
+from .utils.layers import vlad, dimensionality_reduction, image_normalization
 
 
 class Mobilenetvlad(BaseModel):

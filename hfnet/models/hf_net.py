@@ -3,7 +3,8 @@ from tensorflow.contrib import slim
 
 from .base_model import BaseModel, Mode
 from .backbones import mobilenet_v2 as mobilenet
-from .layers import vlad, dimensionality_reduction, image_normalization
+from .utils.layers import (vlad, dimensionality_reduction,
+                           image_normalization, simple_nms)
 
 from .backbones.utils import conv_blocks as ops
 from .backbones.utils import mobilenet as lib
@@ -165,6 +166,8 @@ class HfNet(BaseModel):
                 'descriptor_dim': 256,
                 'detector_grid': 8,
                 'detector_threshold': 0.015,
+                'nms_radius': 0,
+                'num_keypoints': 0,
             },
             'loss_weights': {
                 'local_desc': 1,
@@ -212,12 +215,31 @@ class HfNet(BaseModel):
         ret = {**ret_local, **ret_global}
         if mode == Mode.PRED:
             # Batch size 1 required
-            keypoints = tf.where(tf.greater_equal(
-                ret['scores_dense'][0], config['local']['detector_threshold']))
-            scores = tf.gather_nd(ret['scores_dense'][0], keypoints)
-            keypoints = keypoints[:, ::-1]  # x-y convention
-            ret['keypoints'] = tf.expand_dims(keypoints, 0)
-            ret['scores'] = tf.expand_dims(scores, 0)
+            scores = ret['scores_dense']
+            if config['local']['nms_radius']:
+                scores = simple_nms(scores, config['local']['nms_radius'])
+            with tf.name_scope('keypoint_extraction'):
+                keypoints = tf.where(tf.greater_equal(
+                    scores[0], config['local']['detector_threshold']))
+                scores = tf.gather_nd(scores[0], keypoints)
+            if config['local']['num_keypoints']:
+                with tf.name_scope('top_k_keypoints'):
+                    k = tf.constant(config['local']['num_keypoints'], name='k')
+                    k = tf.minimum(tf.shape(scores)[0], k)
+                    scores, indices = tf.nn.top_k(scores, k)
+                    keypoints = tf.to_int32(tf.gather(
+                        tf.to_float(keypoints), indices))
+            keypoints, scores = keypoints[None], scores[None]
+            keypoints = keypoints[..., ::-1]  # x-y convention
+            with tf.name_scope('descriptor_sampling'):
+                desc = ret['local_descriptor_map']
+                scaling = ((tf.to_float(tf.shape(desc)[1:3]) - 1.)
+                           / (tf.to_float(tf.shape(image)[1:3]) - 1.))
+                local_descriptors = tf.contrib.resampler.resampler(
+                    desc, scaling*tf.to_float(keypoints))
+                local_descriptors = tf.nn.l2_normalize(local_descriptors, -1)
+            ret = {**ret, 'keypoints': keypoints, 'scores': scores,
+                   'local_descriptors': local_descriptors}
         return ret
 
     def _loss(self, outputs, inputs, **config):

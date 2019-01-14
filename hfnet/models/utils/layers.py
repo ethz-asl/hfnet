@@ -1,9 +1,27 @@
 import tensorflow as tf
 from tensorflow.contrib import slim
+from tensorflow.python.ops import gen_nn_ops
 
 
 def image_normalization(image, pixel_value_offset=128.0, pixel_value_scale=128.0):
     return tf.div(tf.subtract(image, pixel_value_offset), pixel_value_scale)
+
+
+def simple_nms(scores, radius):
+    """Performs non maximum suppression on the heatmap using max-pooling.
+    This method does not suppress contiguous points that have the same score.
+    Arguments:
+        scores: the score heatmap, with shape `[B, H, W]`.
+        size: an interger scalar, the radius of the NMS window.
+    """
+    with tf.name_scope('simple_nms'):
+        radius = tf.constant(radius, name='radius')
+        size = radius*2 + 1
+        pooled = gen_nn_ops.max_pool_v2(  # supports dynamic ksize
+                scores[..., None], ksize=[1, size, size, 1],
+                strides=[1, 1, 1, 1], padding='SAME')[..., 0]
+        ret = tf.where(tf.equal(scores, pooled), scores, tf.zeros_like(scores))
+    return ret
 
 
 def delf_attention(feature_map, config, is_training, arg_scope=None):
@@ -80,20 +98,6 @@ def dimensionality_reduction(descriptor, config):
             scope='dimensionality_reduction')
     descriptor = tf.nn.l2_normalize(descriptor, -1)
     return descriptor
-
-
-def triplet_loss(outputs, inputs, **config):
-    distance_p = tf.norm(outputs['descriptor_image'] - outputs['descriptor_p'], axis=1)
-    distance_n = tf.norm(outputs['descriptor_image'] - outputs['descriptor_n'], axis=1)
-    if config['loss_in']:
-        loss = tf.maximum(distance_p + config['triplet_margin'] - distance_n, 0)
-        if config['loss_squared']:
-            loss = tf.square(loss)
-    else:
-        dp = tf.square(distance_p) if config['loss_squared'] else distance_p
-        dn = tf.square(distance_n) if config['loss_squared'] else distance_n
-        loss = dp + tf.maximum(config['triplet_margin'] - dn, 0)
-    return [tf.reduce_mean(i) for i in [loss, distance_p, distance_n]]
 
 
 def vlad_legacy(inputs, num_clusters, assign_weight_initializer=None,

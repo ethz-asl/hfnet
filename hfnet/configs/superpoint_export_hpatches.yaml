@@ -3,6 +3,6 @@ data:
     alteration: 'all'
 model:
     name: 'super_point'
-    nms: 0
-    detection_threshold: 0.01
+    nms_radius: 0
+    detector_threshold: 0.01
     image_channels: 1

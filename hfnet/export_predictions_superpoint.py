@@ -72,8 +72,8 @@ class SuperPointNet(torch.nn.Module):
 
 class SuperPointFrontend:
     def __init__(self, config):
-        self.nms_dist = config['nms']
-        self.conf_thresh = config['detection_threshold']
+        self.nms_dist = config['nms_radius']
+        self.conf_thresh = config['detector_threshold']
         self.cell = 8 # Size of each output cell. Keep this fixed.
         self.border_remove = 4 # Remove points this close to the border.
 

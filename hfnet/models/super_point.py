@@ -2,6 +2,7 @@ import tensorflow as tf
 from tensorflow import layers as tfl
 
 from .base_model import BaseModel, Mode
+from .utils.layers import simple_nms
 
 
 def vgg_block(inputs, filters, kernel_size, name, data_format, training=False,
@@ -65,7 +66,7 @@ def detector_head(inputs, **config):
                 data_format='NCHW' if cfirst else 'NHWC')
         prob = tf.squeeze(prob, axis=cindex)
 
-    return {'logits': x, 'prob': prob}
+    return {'logits': x, 'scores': prob}
 
 
 def descriptor_head(inputs, **config):
@@ -83,25 +84,7 @@ def descriptor_head(inputs, **config):
                       **{'activation': None, **params_conv})
         desc = tf.nn.l2_normalize(x, cindex)
 
-    return {'descriptors': desc}
-
-
-def spatial_nms(prob, size):
-    """Performs non maximum suppression on the heatmap using max-pooling.
-    This method does not suppress contiguous that have the same probability
-    value.
-    Arguments:
-        prob: the probability heatmap, with shape `[H, W]`.
-        size: a scalar, the size of the pooling window.
-    """
-
-    with tf.name_scope('spatial_nms'):
-        prob = tf.expand_dims(tf.expand_dims(prob, axis=0), axis=-1)
-        pooled = tf.nn.max_pool(
-                prob, ksize=[1, size, size, 1], strides=[1, 1, 1, 1],
-                padding='SAME')
-        prob = tf.where(tf.equal(prob, pooled), prob, tf.zeros_like(prob))
-    return tf.squeeze(prob)
+    return {'local_descriptor_map': desc}
 
 
 class SuperPoint(BaseModel):
@@ -111,11 +94,11 @@ class SuperPoint(BaseModel):
     required_config_keys = []
     default_config = {
             'data_format': 'channels_last',
-            'grid_size': 8,
-            'detection_threshold': 0.015,
             'descriptor_size': 256,
-            'nms': 0,
-            'keep_top_k': None,
+            'grid_size': 8,
+            'detector_threshold': 0.015,
+            'nms_radius': 0,
+            'num_keypoints': 0,
     }
 
     def _model(self, inputs, mode, **config):
@@ -125,31 +108,43 @@ class SuperPoint(BaseModel):
         image = inputs['image'] / 255.  # normalize in [0, 1]
         if config['data_format'] == 'channels_first':
             image = tf.transpose(image, [0, 3, 1, 2])
+
+        size = tf.shape(image)[1:3]
+        target_size = tf.to_int64(tf.floor(tf.to_float(size)/8)*8)
+        image = image[:, :target_size[0], :target_size[1]]
+
         features = vgg_backbone(image, **config)
         detections = detector_head(features, **config)
         descriptors = descriptor_head(features, **config)
         results = {**detections, **descriptors}
 
-        # Apply NMS and get the final prediction
-        prob = results['prob']
-        if config['nms']:
-            prob = tf.map_fn(lambda p: spatial_nms(p, config['nms']), prob)
-            results['prob_nms'] = prob
-
-        # Extract and sort keypoints
-        # Assuming batch size 1
-        keypoints = tf.where(tf.greater_equal(
-            prob[0], config['detection_threshold']))
-        scores = tf.gather_nd(prob[0], keypoints)
-        if config['keep_top_k']:
-            k = tf.minimum(tf.shape(scores)[0],
-                           tf.constant(config['keep_top_k']))
-            scores, indices = tf.nn.top_k(scores, k)
-            keypoints = tf.to_int32(tf.gather(tf.to_float(keypoints), indices))
-        keypoints = keypoints[:, ::-1]  # x-y convention
-        results['keypoints'] = tf.expand_dims(keypoints, 0)
-        results['scores'] = tf.expand_dims(scores, 0)
-        results['local_descriptor_map'] = results['descriptors']
+        if mode == Mode.PRED:
+            # Batch size 1 required
+            scores = results['scores_dense']
+            if config['local']['nms']:
+                scores = simple_nms(scores, config['local']['nms'])
+            with tf.name_scope('keypoint_extraction'):
+                keypoints = tf.where(tf.greater_equal(
+                    scores[0], config['local']['detector_threshold']))
+                scores = tf.gather_nd(scores[0], keypoints)
+            if config['local']['num_keypoints']:
+                with tf.name_scope('top_k_keypoints'):
+                    k = tf.constant(config['local']['num_keypoints'], name='k')
+                    k = tf.minimum(tf.shape(scores)[0], k)
+                    scores, indices = tf.nn.top_k(scores, k)
+                    keypoints = tf.to_int32(tf.gather(
+                        tf.to_float(keypoints), indices))
+            keypoints, scores = keypoints[None], scores[None]
+            keypoints = keypoints[..., ::-1]  # x-y convention
+            with tf.name_scope('descriptor_sampling'):
+                desc = results['local_descriptor_map']
+                scaling = ((tf.to_float(tf.shape(desc)[1:3]) - 1.)
+                           / (tf.to_float(tf.shape(image)[1:3]) - 1.))
+                local_descriptors = tf.contrib.resampler.resampler(
+                    desc, scaling*tf.to_float(keypoints))
+                local_descriptors = tf.nn.l2_normalize(local_descriptors, -1)
+            results = {**results, 'keypoints': keypoints, 'scores': scores,
+                       'local_descriptors': local_descriptors}
 
         return results
 

@@ -1,7 +1,7 @@
 import tensorflow as tf
 import numpy as np
 
-from .layers import vlad_legacy
+from .utils.layers import vlad_legacy
 from .base_model import BaseModel
 
 

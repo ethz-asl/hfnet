@@ -10,7 +10,6 @@ data:
         upright: true
 model:
     name: 'super_point'
-    nms: 0
-    detection_threshold: 0.005
-    keep_top_k: null
+    nms_radius: 0
+    detector_threshold: 0.005
     image_channels: 1
