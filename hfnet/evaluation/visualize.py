@@ -1,5 +1,6 @@
 import numpy as np
 import cv2
+from sklearn.decomposition import PCA
 
 
 def draw_keypoints(img, kpts, color=(0, 255, 0), radius=4, s=3):
@@ -58,3 +59,17 @@ def draw_matches(img1, kp1, img2, kp2, matches, color=None, kp_radius=5,
         cv2.circle(
             new_img, end2, kp_radius, c, thickness, lineType=cv2.LINE_AA)
     return new_img
+
+
+def draw_dense_descriptors(*maps):
+    pca = PCA(n_components=3, svd_solver='full')
+    dims = [m.shape[-1] for m in maps]
+    assert len(np.unique(dims)) == 1
+    dim = dims[0]
+    all_maps = np.concatenate([m.reshape(-1, dim) for m in maps])
+    pca.fit(all_maps)
+    projected = [pca.transform(m.reshape(-1, dim)).reshape(m.shape[:2]+(3,))
+                 for m in maps]
+    _min = np.min([np.min(p) for p in projected])
+    _max = np.max([np.max(p) for p in projected])
+    return [(p - _min) / (_max - _min) for p in projected]
