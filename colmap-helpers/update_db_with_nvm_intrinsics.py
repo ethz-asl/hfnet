@@ -97,11 +97,12 @@ def main():
     num_images = 0
 
     for line in f:
-      if line_num == 0 or not line:
+      if line_num == 0 or not line.strip():
+          print('Skip line #' + str(line_num))
           line_num += 1
           continue
       else:
-          if total_num_images==0:
+          if total_num_images == 0:
               total_num_images = int(line)
               line_num += 1
               continue
