@@ -16,7 +16,7 @@ from .utils.localization import (
     preprocess_localdb, loc_failure, LocResult)
 from hfnet.datasets.colmap_utils.read_model import read_model
 from .cpp_localization import CppLocalization
-from hfnet.utils.tools import Timer  # noqa: F401 (profiling)
+from hfnet.utils.tools import Timer
 from hfnet.settings import DATA_PATH
 
 sys.modules['hfnet.evaluation.db_management'] = db_management  # backward comp
@@ -117,6 +117,7 @@ class Localization:
         config_global = self.config['global']
         config_local = self.config['local']
         config_pose = self.config['pose']
+        timings = {}
 
         # Fetch data
         query_item = extract_query(
@@ -137,26 +138,35 @@ class Localization:
             global_desc, k=config_global['num_prior'])
         prior_ids = self.db_ids[indices]
 
-        # Local matching
-        clustered_frames = covis_clustering(
-            prior_ids, self.local_db, self.points)
-        local_desc = self.local_transform(query_item.local_desc)
+        # Clustering
+        with Timer() as t:
+            clustered_frames = covis_clustering(
+                prior_ids, self.local_db, self.points)
+            local_desc = self.local_transform(query_item.local_desc)
+        timings['covis'] = t.duration
 
         # Iterative pose estimation
         dump = []
         results = []
+        timings['local'], timings['pnp'] = 0, 0
         for place in clustered_frames:
+            # Local matching
             matches_data = {} if debug else None
-            matches, place_lms = match_against_place(
+            matches, place_lms, duration = match_against_place(
                 place, self.local_db, local_desc, config_local['ratio_thresh'],
+                do_fast_matching=config_local.get('fast_matching', True),
                 debug_dict=matches_data)
+            timings['local'] += duration
 
+            # PnP
             if len(matches) > 3:
-                matched_kpts = query_item.keypoints[matches[:, 0]]
-                matched_lms = np.stack(
-                    [self.points[place_lms[i]].xyz for i in matches[:, 1]])
-                result, inliers = do_pnp(
-                    matched_kpts, matched_lms, query_info, config_pose)
+                with Timer() as t:
+                    matched_kpts = query_item.keypoints[matches[:, 0]]
+                    matched_lms = np.stack(
+                        [self.points[place_lms[i]].xyz for i in matches[:, 1]])
+                    result, inliers = do_pnp(
+                        matched_kpts, matched_lms, query_info, config_pose)
+                timings['pnp'] += t.duration
             else:
                 result = loc_failure
                 inliers = np.empty((0,), np.int32)
@@ -186,10 +196,11 @@ class Localization:
                 'index_success': (len(dump)-1) if result.success else -1,
                 'dumps': dump,
                 'results': results,
+                'timings': timings
             }
             return result, debug_data
         else:
-            return result, None
+            return result, {'timings': timings}
 
 
 def evaluate(loc, queries, query_dataset, max_iter=None):

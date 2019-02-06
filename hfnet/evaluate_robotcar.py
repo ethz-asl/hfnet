@@ -53,6 +53,7 @@ configs_local = {
         'broken_db': True,
         'root': False,
         'ratio_thresh': 0.7,
+        'fast_matching': False,
     },
     'hfnet': {
         'db_name': 'localdb_hf_glm-bdd_lrsteps.pkl',

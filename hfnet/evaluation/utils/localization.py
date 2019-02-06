@@ -3,8 +3,10 @@ import cv2
 from sklearn.decomposition import PCA
 from collections import namedtuple
 
-from .descriptors import matches_cv2np, normalize, root_descriptors
+from .descriptors import (
+    normalize, root_descriptors, fast_matching, matches_cv2np)
 from .db_management import LocalDbItem
+from hfnet.utils.tools import Timer
 
 
 LocResult = namedtuple(
@@ -77,52 +79,37 @@ def covis_clustering(frame_ids, local_db, points):
 
 
 def match_against_place(frame_ids, local_db, query_desc, ratio_thresh,
-                        debug_dict=None, expand_obs=False, graph=None,
-                        model_info=None):
+                        do_fast_matching=True, debug_dict=None):
     place_db = [local_db[frame_id] for frame_id in frame_ids]
     place_lms = np.concatenate([db.landmark_ids for db in place_db])
     place_desc = np.concatenate([db.descriptors for db in place_db])
 
-    # Debug
-    lm_frames = [frame_id for frame_id, db in zip(frame_ids, place_db)
-                 for _ in db.landmark_ids]
-    lm_indices = np.concatenate([np.arange(len(db.keypoints))
-                                 for db in place_db])
-
-    if expand_obs:
-        assert graph is not None and model_info is not None
-        new_desc_indices = []
-        new_lms = []
-        for lm in place_lms:
-            for f_id, kpt in zip(graph[lm].image_ids, graph[lm].point2D_idxs):
-                if f_id in frame_ids:
-                    continue
-                new_lms.append(lm)
-                f_lms = model_info[f_id].point3D_ids
-                desc_idx = np.where(f_lms[f_lms > 0] == lm)[0][0]
-                new_desc_indices.append((f_id, desc_idx))
-        place_lms = np.append(place_lms, new_lms)
-        place_desc = np.append(
-            place_desc,
-            [local_db[f].descriptors[d] for f, d in new_desc_indices],
-            axis=0)
-        lm_frames.extend([f for f, _ in new_desc_indices])
-        lm_indices = np.append(lm_indices, [d for _, d in new_desc_indices])
-
+    duration = 0
     if len(query_desc) > 0 and len(place_desc) > 1:
-        matcher = cv2.BFMatcher(cv2.NORM_L2)
-        matches = matcher.knnMatch(
-            query_desc.astype(np.float32), place_desc.astype(np.float32), k=2)
-        matches1, matches2 = list(zip(*matches))
-        (matches1, dist1) = matches_cv2np(matches1)
-        (matches2, dist2) = matches_cv2np(matches2)
-        good = (place_lms[matches1[:, 1]] == place_lms[matches2[:, 1]])
-        good = good | (dist1/dist2 < ratio_thresh)
-        matches = matches1[good]
+        query_desc = query_desc.astype(np.float32, copy=False)
+        place_desc = place_desc.astype(np.float32, copy=False)
+        with Timer() as t:
+            if do_fast_matching:
+                matches = fast_matching(
+                    query_desc, place_desc, ratio_thresh, labels=place_lms)
+            else:
+                matcher = cv2.BFMatcher(cv2.NORM_L2)
+                matches = matcher.knnMatch(query_desc, place_desc, k=2)
+                matches1, matches2 = list(zip(*matches))
+                (matches1, dist1) = matches_cv2np(matches1)
+                (matches2, dist2) = matches_cv2np(matches2)
+                good = (place_lms[matches1[:, 1]] == place_lms[matches2[:, 1]])
+                good = good | (dist1/dist2 < ratio_thresh)
+                matches = matches1[good]
+        duration = t.duration
     else:
         matches = np.empty((0, 2), np.int32)
 
     if debug_dict is not None and len(matches) > 0:
+        lm_frames = [frame_id for frame_id, db in zip(frame_ids, place_db)
+                     for _ in db.landmark_ids]
+        lm_indices = np.concatenate([np.arange(len(db.keypoints))
+                                     for db in place_db])
         sorted_frames, counts = np.unique(
             [lm_frames[m2] for m1, m2 in matches], return_counts=True)
         best_frame_id = sorted_frames[np.argmax(counts)]
@@ -136,7 +123,7 @@ def match_against_place(frame_ids, local_db, query_desc, ratio_thresh,
         debug_dict['lm_frames'] = lm_frames
         debug_dict['lm_indices'] = lm_indices
 
-    return matches, place_lms
+    return matches, place_lms, duration
 
 
 def do_pnp(kpts, lms, query_info, config):

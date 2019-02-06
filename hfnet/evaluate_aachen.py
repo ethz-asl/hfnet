@@ -71,6 +71,7 @@ configs_local = {
         'colmap_db': 'aachen.db',
         'root': False,
         'ratio_thresh': 0.7,
+        'fast_matching': False,
     },
     'doap': {
         'db_name': 'localdb_doap_kpts-sp-nms4.pkl',
