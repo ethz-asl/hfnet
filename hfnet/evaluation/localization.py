@@ -2,7 +2,6 @@ import numpy as np
 import logging
 from pathlib import Path
 import pickle
-from scipy.spatial import cKDTree
 import sys
 from tqdm import tqdm
 
@@ -14,6 +13,7 @@ from .utils.db_management import (
 from .utils.localization import (
     covis_clustering, match_against_place, do_pnp, preprocess_globaldb,
     preprocess_localdb, loc_failure, LocResult)
+from .utils.descriptors import topk_matching
 from hfnet.datasets.colmap_utils.read_model import read_model
 from .cpp_localization import CppLocalization
 from hfnet.utils.tools import Timer
@@ -87,7 +87,6 @@ class Localization:
         logging.info('Indexing descriptors')
         self.global_descriptors, self.global_transform = preprocess_globaldb(
             global_descriptors, config['global'])
-        self.global_index = cKDTree(self.global_descriptors)
         self.local_db, self.local_transform = preprocess_localdb(
             local_db, config['local'])
 
@@ -132,11 +131,13 @@ class Localization:
                 self.global_transform, self.local_transform)
 
         # Global matching
-        global_desc = self.global_transform(
-            query_item.global_desc[np.newaxis])[0]
-        dist, indices = self.global_index.query(
-            global_desc, k=config_global['num_prior'])
-        prior_ids = self.db_ids[indices]
+        with Timer() as t:
+            global_desc = self.global_transform(
+                query_item.global_desc[np.newaxis])[0]
+            indices = topk_matching(global_desc, self.global_descriptors,
+                                    config_global['num_prior'])
+            prior_ids = self.db_ids[indices]
+        timings['global'] = t.duration
 
         # Clustering
         with Timer() as t:

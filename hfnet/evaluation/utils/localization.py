@@ -15,12 +15,14 @@ loc_failure = LocResult(False, 0, 0, None)
 
 
 def preprocess_globaldb(global_descriptors, config):
-    global_descriptors = normalize(global_descriptors)
-    transf = [lambda x: normalize(x)]  # noqa: E731
+    global_descriptors = normalize(global_descriptors.astype(np.float32))
+    transf = [lambda x: normalize(x.astype(np.float32, copy=False))]
     if config.get('pca_dim', 0) > 0:
         pca = PCA(n_components=config['pca_dim'], svd_solver='full')
-        global_descriptors = normalize(pca.fit_transform(global_descriptors))
-        transf.append(lambda x: normalize(pca.transform(x)))  # noqa: E731
+        global_descriptors = normalize(
+            pca.fit_transform(global_descriptors).astype(np.float32))
+        transf.append(lambda x: normalize(
+            pca.transform(x).astype(np.float32, copy=False)))
 
     def f(x):
         for t in transf:

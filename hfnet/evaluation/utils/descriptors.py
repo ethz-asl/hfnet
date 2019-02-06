@@ -114,6 +114,16 @@ def fast_matching(desc1, desc2, ratio_thresh, labels=None):
     return matches.cpu().numpy()
 
 
+def topk_matching(query, database, k):
+    '''Retrieve top k matches from a database (shape N x dim) with a single
+       query. In order to reduce any overhead, use numpy instead of PyTorch
+    '''
+    dist = 2 * (1 - database @ query)
+    ind = np.argpartition(dist, k)[:k]
+    ind = ind[np.argsort(dist[ind])]
+    return ind
+
+
 def matches_cv2np(matches_cv):
     matches_np = np.int32([[m.queryIdx, m.trainIdx] for m in matches_cv])
     distances = np.float32([m.distance for m in matches_cv])
