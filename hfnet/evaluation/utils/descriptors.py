@@ -108,8 +108,11 @@ def fast_matching(desc1, desc2, ratio_thresh, labels=None):
             labels_nn = labels[ind]
             match_ok |= (labels_nn[:, 0] == labels_nn[:, 1])
 
-        matches = torch.stack(
-            [torch.nonzero(match_ok)[:, 0], ind[match_ok][:, 0]], dim=-1)
+        if match_ok.any():
+            matches = torch.stack(
+                [torch.nonzero(match_ok)[:, 0], ind[match_ok][:, 0]], dim=-1)
+        else:
+            matches = ind.new_empty((0, 2))
 
     return matches.cpu().numpy()
 
