@@ -43,7 +43,7 @@ configs_global = {
 
 configs_local = {
     'superpoint': {
-        'db_name': 'localdb_sp-nms4_fix-interp.pkl',
+        'db_name': 'localdb_sp-nms4_fix-interp_new-02-05.pkl',
         'experiment': 'super_point_pytorch/aachen_resize-960',
         'predictor': export_loader,
         'has_keypoints': True,
