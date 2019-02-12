@@ -27,7 +27,9 @@ class Timer(object):
 
     def __enter__(self):
         self.tstart = time.time()
+        return self
 
     def __exit__(self, type, value, traceback):
-        prefix = ('[%s]' % self.name) if self.name else ''
-        print('%s Elapsed: %s' % (prefix, time.time() - self.tstart))
+        self.duration = time.time() - self.tstart
+        if self.name is not None:
+            print('[%s] Elapsed: %s' % (self.name, self.duration))

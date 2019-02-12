@@ -77,7 +77,7 @@ def build_localization_dbs(db_ids, images, cameras,
         if config_local is not None:
             db_item = images[image_id]
             valid = db_item.point3D_ids > 0
-            kpts = db_item.xys[valid]
+            kpts = db_item.xys[valid] - 0.5  # Colmap -> CV convention
 
             if 'predictor' in config_local:
                 # Kind of hacky but that's for the sake of reusability
@@ -124,8 +124,8 @@ def read_query_list(path, prefix=''):
                 dist = 0.0
             else:
                 raise(ValueError, f'Unknown camera model: {model}')
-            K = np.array([[float(fx), 0, float(px)],
-                          [0, float(fy), float(py)],
+            K = np.array([[float(fx), 0, float(px)-0.5],
+                          [0, float(fy), float(py)-0.5],
                           [0, 0, 1]])
             name = str(Path(prefix, name))
             query = QueryInfo(name, model, int(w), int(h), K, float(dist))

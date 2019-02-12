@@ -13,7 +13,7 @@ from hfnet.settings import EXPER_PATH
 
 configs_global = {
     'netvlad': {
-        'db_name': 'globaldb_netvlad_sift.pkl',
+        'db_name': 'globaldb_netvlad_02-07.pkl',
         'experiment': 'netvlad/cmu_resize-1024',
         'predictor': export_loader,
         'has_keypoints': False,
@@ -22,7 +22,7 @@ configs_global = {
         'num_prior': 10,
     },
     'hfnet': {
-        'db_name': 'globaldb_hf_glm-bdd_lrsteps.pkl',
+        'db_name': 'globaldb_hf_glm-bdd_lrsteps_02-07.pkl',
         'experiment': 'hfnet-shared_weights-unc_aug-photo_glm-bdd_lrsteps/cmu_resize-1024',
         'predictor': export_loader,
         'has_keypoints': False,
@@ -34,7 +34,7 @@ configs_global = {
 
 configs_local = {
     'superpoint': {
-        'db_name': 'localdb_sp-nms4-ratio85.pkl',
+        'db_name': 'localdb_sp-nms4-ratio85_focal-from-ref-db.pkl',
         'experiment': 'super_point_pytorch/cmu_resize-1024',
         'predictor': export_loader,
         'has_keypoints': True,
@@ -53,9 +53,10 @@ configs_local = {
         'broken_paths': True,
         'root': False,
         'ratio_thresh': 0.7,
+        'fast_matching': False,
     },
     'hfnet': {
-        'db_name': 'localdb_hf_glm-bdd_lrsteps.pkl',
+        'db_name': 'localdb_hf_glm-bdd_lrsteps_focal-from-ref-db.pkl',
         'experiment': 'hfnet-shared_weights-unc_aug-photo_glm-bdd_lrsteps/cmu_resize-1024',
         'predictor': export_loader,
         'has_keypoints': True,

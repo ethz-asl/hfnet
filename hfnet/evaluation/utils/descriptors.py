@@ -84,6 +84,49 @@ def matching(desc1, desc2, do_ratio_test=False, cross_check=True):
     return matches_cv2np(matches)
 
 
+def fast_matching(desc1, desc2, ratio_thresh, labels=None):
+    '''A fast matching method that matches multiple descriptors simultaneously.
+       Assumes that descriptors are normalized and can run on GPU if available.
+       Performs the landmark-aware ratio test if labels are provided.
+    '''
+    import torch
+    cuda = torch.cuda.is_available()
+
+    desc1, desc2 = torch.from_numpy(desc1), torch.from_numpy(desc2)
+    if cuda:
+        desc1, desc2 = desc1.cuda(), desc2.cuda()
+
+    with torch.no_grad():
+        dist = 2*(1 - desc1 @ desc2.t())
+        dist_nn, ind = dist.topk(2, dim=-1, largest=False)
+        match_ok = (dist_nn[:, 0] <= (ratio_thresh**2)*dist_nn[:, 1])
+
+        if labels is not None:
+            labels = torch.from_numpy(labels)
+            if cuda:
+                labels = labels.cuda()
+            labels_nn = labels[ind]
+            match_ok |= (labels_nn[:, 0] == labels_nn[:, 1])
+
+        if match_ok.any():
+            matches = torch.stack(
+                [torch.nonzero(match_ok)[:, 0], ind[match_ok][:, 0]], dim=-1)
+        else:
+            matches = ind.new_empty((0, 2))
+
+    return matches.cpu().numpy()
+
+
+def topk_matching(query, database, k):
+    '''Retrieve top k matches from a database (shape N x dim) with a single
+       query. In order to reduce any overhead, use numpy instead of PyTorch
+    '''
+    dist = 2 * (1 - database @ query)
+    ind = np.argpartition(dist, k)[:k]
+    ind = ind[np.argsort(dist[ind])]
+    return ind
+
+
 def matches_cv2np(matches_cv):
     matches_np = np.int32([[m.queryIdx, m.trainIdx] for m in matches_cv])
     distances = np.float32([m.distance for m in matches_cv])

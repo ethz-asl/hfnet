@@ -2,6 +2,8 @@ import argparse
 import os
 import time
 import tensorflow as tf
+import numpy as np
+import cv2
 from tensorflow.python.saved_model import tag_constants
 
 tf.contrib.resampler  # import C++ op
@@ -10,6 +12,7 @@ tf.contrib.resampler  # import C++ op
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('model', type=str)
+    parser.add_argument('--image', type=str)
     parser.add_argument('--input_size', type=int, default=960)
     parser.add_argument('--global_head', action='store_true')
     parser.add_argument('--local_head', action='store_true')
@@ -38,7 +41,13 @@ if __name__ == '__main__':
 
     with tf.Session(graph=tf.Graph()) as sess:
         with tf.device(device):
-            image = tf.random_uniform([b, h, w, 1], dtype=tf.float32)
+            if args.image:
+                image_np = cv2.resize(cv2.imread(args.image), (w, h))
+                image_np = cv2.cvtColor(image_np, cv2.COLOR_BGR2GRAY)
+                image_np = image_np.astype(np.float32)[None, ..., None]
+                image = tf.constant(image_np)
+            else:
+                image = tf.random_uniform([b, h, w, 1], dtype=tf.float32)
         tf.saved_model.loader.load(
             sess, [tag_constants.SERVING], args.model,
             clear_devices=False, input_map={'image:0': image})

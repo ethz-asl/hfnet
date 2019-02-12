@@ -113,7 +113,10 @@ class BaseDataset(metaclass=ABCMeta):
                 self.tf_it[n] = prefetched.make_initializable_iterator()
                 self.tf_next[n] = self.tf_it[n].get_next()
         self.end_set = tf.errors.OutOfRangeError
-        self.sess = tf.Session()
+
+        sess_config = tf.ConfigProto()
+        sess_config.gpu_options.allow_growth = True
+        self.sess = tf.Session(config=sess_config)
 
     def _get_set_generator(self, set_name):
         self.sess.run(self.tf_it[set_name].initializer)

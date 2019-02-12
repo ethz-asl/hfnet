@@ -34,7 +34,7 @@ configs_global = {
 
 configs_local = {
     'superpoint': {
-        'db_name': 'localdb_sp-nms4-ratio92-matchfix.pkl',
+        'db_name': 'localdb_sp-nms4_focal-from-ref-db_shift-kpts.pkl',
         'experiment': 'super_point_pytorch/robotcar_resize-960',
         'predictor': export_loader,
         'has_keypoints': True,
@@ -53,9 +53,10 @@ configs_local = {
         'broken_db': True,
         'root': False,
         'ratio_thresh': 0.7,
+        'fast_matching': False,
     },
     'hfnet': {
-        'db_name': 'localdb_hf_glm-bdd_lrsteps.pkl',
+        'db_name': 'localdb_hf_glm-bdd_lrsteps_focal-from-ref-db_shift-kpts.pkl',
         'experiment':  'hfnet-shared_weights-unc_aug-photo_glm-bdd_lrsteps/robotcar_resize-960',
         'predictor': export_loader,
         'has_keypoints': True,
