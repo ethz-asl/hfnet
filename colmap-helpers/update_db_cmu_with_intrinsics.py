@@ -3,6 +3,8 @@ import numpy as np
 import sqlite3
 import os
 
+from internal.db_handling import array_to_blob
+
 # c0
 # 868.99 0 525.94
 # 0 866.06 420.04
@@ -43,12 +45,12 @@ def update_intrinsics_in_cmu_db(db_file):
 
         if "c0" in name:
           assert("c1" not in name)
-          print "c0", name
+          print("c0", name)
           db_update_intrinsics_of_camera_id(connection, camera_id, (868.99 + 866.06) / 2.0, 525.94, 420.04)
         else:
           assert("c0" not in name)
           assert("c1" in name)
-          print "c1", name
+          print("c1", name)
           db_update_intrinsics_of_camera_id(connection, camera_id, (873.38 + 876.49) / 2.0, 529.32, 397.27)
 
     cursor.close()
@@ -77,7 +79,7 @@ def db_update_intrinsics_of_camera_id(db_connection, camera_id, focal_length, cx
     # Python 3 version.
     #new_params = [intrinsics.tostring(), camera_id]
 
-    new_params = [np.getbuffer(intrinsics), camera_id]
+    new_params = [array_to_blob(intrinsics), camera_id]
     cursor.execute('UPDATE cameras SET params = ? WHERE camera_id = ?;', new_params)
     cursor.close()
 
@@ -85,7 +87,7 @@ def db_update_intrinsics_of_camera_id(db_connection, camera_id, focal_length, cx
 def main():
   args = parse_args()
 
-  print 'Reading DB'
+  print('Reading DB')
   update_intrinsics_in_cmu_db(args.database_file)
 
 

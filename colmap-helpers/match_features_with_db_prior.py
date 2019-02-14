@@ -32,15 +32,15 @@ def main():
     args = parse_args()
 
     ratio_test_values = [float(v) for v in args.ratio_test_values.split(',')]
-    print 'Ratio test values to use:', ratio_test_values
+    print('Ratio test values to use:', ratio_test_values)
     outfiles = files = [open("matches{}.txt".format(x),'w+') for x in [int(i * 100) for i in ratio_test_values]]
 
-    print 'Looking for matching image pairs...'
+    print('Looking for matching image pairs...')
     matching_image_pairs = \
       db_matching_images.get_matching_images(args.database_file,
                                              args.min_num_matches,
                                              args.image_prefix)
-    print 'Got', len(matching_image_pairs), 'matching image pairs. Will match now.'
+    print('Got', len(matching_image_pairs), 'matching image pairs. Will match now.')
 
     num_missing_images = 0
     for matching_pair in tqdm(matching_image_pairs, total=len(matching_image_pairs), unit="pairs"):
@@ -82,7 +82,7 @@ def main():
     for outfile in outfiles:
         outfile.close()
 
-    print 'Missing', num_missing_images, 'images skipped.'
+    print('Missing', num_missing_images, 'images skipped.')
 
 if __name__ == "__main__":
     main()

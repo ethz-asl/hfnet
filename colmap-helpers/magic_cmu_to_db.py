@@ -88,7 +88,7 @@ def main():
 
         db.commit()
 
-    print 'Done.'
+    print('Done.')
 
 
 

@@ -108,16 +108,16 @@ def process(nvm_data, name_to_image_id,outfile):
 def main():
   args = parse_args()
 
-  print 'Reading DB'
+  print('Reading DB')
   name_to_image_id = db_image_name_dict(args.database_file)
 
-  print 'Exporting cameras'
+  print('Exporting cameras')
   export_cameras(args.database_file, args.output_dir)
 
-  print 'Creating empty Points3D file'
+  print('Creating empty Points3D file')
   open(os.path.join(args.output_dir, 'points3D.txt'), 'w+').close()
 
-  print 'Reading NVM'
+  print('Reading NVM')
   with open(args.nvm_file) as f:
     line_num = 0
     total_num_images = 0
@@ -130,7 +130,7 @@ def main():
           pass
       elif len(line.split()) == 1:
            total_num_images = int(line)
-           print 'Num images', total_num_images
+           print('Num images', total_num_images)
       else:
           data = line.split(' ')
           process(data, name_to_image_id, outfile)
@@ -141,7 +141,7 @@ def main():
 
     outfile.close()
 
-  print 'Done'
+  print('Done')
 
 
 if __name__ == "__main__":

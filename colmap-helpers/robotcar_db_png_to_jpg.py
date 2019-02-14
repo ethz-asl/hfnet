@@ -21,7 +21,7 @@ def main():
 
     cursor.close()
 
-    print 'Got', len(image_ids), 'image ids.'
+    print('Got', len(image_ids), 'image ids.')
 
     cursor = connection.cursor()
     for image_id_and_name in image_ids:

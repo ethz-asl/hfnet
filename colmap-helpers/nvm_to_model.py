@@ -142,7 +142,7 @@ def export_image_data(image_data, image_id_to_keypoints, slice_number, output_di
 
 def main():
     args = parse_args()
-    print args.slice
+    print(args.slice)
 
     # POINT3D_ID, X, Y, Z, R, G, B, ERROR, TRACK[] as (IMAGE_ID, POINT2D_IDX)
     out_points = open(os.path.join(args.output_dir, "points3D.txt"), "w")
@@ -174,17 +174,17 @@ def main():
             if i == (total_num_images - 1):
                 break
 
-        print 'Image index list length:', len(image_idx_to_db_image_id)
+        print('Image index list length:', len(image_idx_to_db_image_id))
 
         for line in f:
-            print line
+            print(line)
             # Skip empty lines and read the one that actually contains the
             # number of 3D points in the NVM file.
             if line:
                 total_num_points = int(line)
                 break
 
-        print 'Will export', total_num_points, '3D point entries.'
+        print('Will export', total_num_points, '3D point entries.')
         for point_idx, line in tqdm(enumerate(f), total=total_num_points, unit="pts"):
             xyz = np.array(line.split()[0:3]).astype(np.float)
             rgb = np.array(line.split()[3:6]).astype(np.int)
@@ -209,10 +209,10 @@ def main():
             out_points.write('\n')
 
     out_points.close()
-    print 'Points3D done. Now exporting images.'
+    print('Points3D done. Now exporting images.')
     export_image_data(image_data, image_idx_to_keypoints, args.slice, args.output_dir)
 
-    print 'Done.'
+    print('Done.')
 
 
 

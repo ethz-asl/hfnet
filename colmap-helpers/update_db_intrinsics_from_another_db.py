@@ -3,6 +3,8 @@ import numpy as np
 import sqlite3
 import os
 
+from internal.db_handling import array_to_blob
+
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -19,7 +21,7 @@ def db_update_intrinsics_entry(db_connection, camera_id, intrinsics_to_write):
     # Python 3 version.
     #new_params = [intrinsics_to_write.tostring(), camera_id]
 
-    new_params = [np.getbuffer(intrinsics_to_write), camera_id]
+    new_params = [array_to_blob(intrinsics_to_write), camera_id]
     cursor.execute('UPDATE cameras SET params = ? WHERE camera_id = ?;', new_params)
     cursor.close()
 
@@ -78,13 +80,13 @@ def parse_input_db(database_file):
 def main():
   args = parse_args()
 
-  print 'Reading the input DB'
+  print('Reading the input DB')
   image_name_to_id_and_camera_id, camera_intrinsics = parse_input_db(args.intrinsics_database_file)
 
-  print 'Updating the target DB'
+  print('Updating the target DB')
   update_target_db(args.database_file_to_modify, image_name_to_id_and_camera_id, camera_intrinsics)
 
-  print 'Done!'
+  print('Done!')
 
 
 if __name__ == "__main__":

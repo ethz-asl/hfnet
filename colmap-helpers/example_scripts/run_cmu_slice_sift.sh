@@ -11,7 +11,7 @@ rm -rf ${triangulated_dir}
 mkdir ${triangulated_dir}
 
 # Use the provided NVM file and convert it directly to a 3D model.
-python colmap-helpers/nvm_to_model.py --slice ${slice_num} --output_dir ${triangulated_dir}
+python3 colmap-helpers/nvm_to_model.py --slice ${slice_num} --output_dir ${triangulated_dir}
 # Convert the model from a text format to a binary format.
 colmap model_converter --input_path ${triangulated_dir} --output_path ${triangulated_dir} --output_type bin
 rm ${triangulated_dir}/*.txt

@@ -3,6 +3,8 @@ import numpy as np
 import sqlite3
 import os
 
+from internal.db_handling import array_to_blob
+
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -59,7 +61,7 @@ def db_update_intrinsics(db_connection, camera_id, focal_length, radial_dist):
     # Python 3 version.
     #new_params = [intrinsics.tostring(), camera_id]
 
-    new_params = [np.getbuffer(intrinsics), camera_id]
+    new_params = [array_to_blob(intrinsics), camera_id]
     cursor.execute('UPDATE cameras SET params = ? WHERE camera_id = ?;', new_params)
     cursor.close()
 
@@ -75,9 +77,9 @@ def process(nvm_data, image_name_to_id_and_camera_id, db_connection):
         ('No such image name in dict', image_filename)
     image_id, camera_id = image_name_to_id_and_camera_id[image_filename]
 
-    print image_filename, focal_length, radial_dist, \
+    print(image_filename, focal_length, radial_dist, \
         'maps to image_id', image_id, \
-        'and camera_id', camera_id
+        'and camera_id', camera_id)
 
     db_update_intrinsics(db_connection, camera_id, focal_length, radial_dist)
 
@@ -85,12 +87,12 @@ def process(nvm_data, image_name_to_id_and_camera_id, db_connection):
 def main():
   args = parse_args()
 
-  print 'Reading DB'
+  print('Reading DB')
   image_name_to_id_and_camera_id = db_image_name_dict(args.database_file)
 
   connection = sqlite3.connect(args.database_file)
 
-  print 'Reading NVM'
+  print('Reading NVM')
   with open(args.nvm_file) as f:
     line_num = 0
     total_num_images = 0
@@ -113,7 +115,7 @@ def main():
             break
       line_num += 1
 
-  print 'Done parsing data for', num_images, 'images.'
+  print('Done parsing data for', num_images, 'images.')
 
   connection.commit()
   connection.close()
