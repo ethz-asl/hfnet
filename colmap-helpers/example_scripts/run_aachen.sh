@@ -13,8 +13,8 @@ python colmap-helpers/match_features_with_db_prior.py --database_file aachen.db 
 # Create a COLMAP DB, import features, update intrinsics and import matches as two-view geometries.
 colmap database_creator --database_path database87.db
 colmap feature_importer --database_path database87.db --image_path images_upright/ --import_path images_upright/
-python colmap-helpers/update_db_with_nvm_intrinsics.py --database_file database87.db --nvm_file aachen_cvpr2018_db.nvm --SiftMatching.max_num_trials 20000 ----SiftMatching.min_inlier_ratio 0.20
-colmap matches_importer --database_path database87.db --match_list_path matches87.txt --match_type raw
+python colmap-helpers/update_db_with_nvm_intrinsics.py --database_file database87.db --nvm_file aachen_cvpr2018_db.nvm
+colmap matches_importer --database_path database87.db --match_list_path matches87.txt --match_type raw --SiftMatching.max_num_trials 20000 --SiftMatching.min_inlier_ratio 0.20
 
 # Build an initial model using the camera poses from the NVM file.
 mkdir initial_model
