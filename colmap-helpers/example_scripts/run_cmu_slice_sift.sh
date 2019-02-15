@@ -1,17 +1,20 @@
 #!/bin/sh
 
 slice_num=$1
-slice_db=slice${slice_num}.db
 
-model_dir=model_sift_slice${slice_num}
-triangulated_dir=triangulated_sift_nvm_slice${slice_num}
+slice_db="slice${slice_num}.db"
+final_model="cmu-slice${slice_num}_sift_model"
 
-rm -rf ${triangulated_dir}
-
-mkdir ${triangulated_dir}
+mkdir ${final_model}
 
 # Use the provided NVM file and convert it directly to a 3D model.
-python3 colmap-helpers/nvm_to_model.py --slice ${slice_num} --output_dir ${triangulated_dir}
+python3 nvm_to_model.py \
+    --slice ${slice_num} \
+    --output_dir ${final_model}
+
 # Convert the model from a text format to a binary format.
-colmap model_converter --input_path ${triangulated_dir} --output_path ${triangulated_dir} --output_type bin
-rm ${triangulated_dir}/*.txt
+colmap model_converter \
+    --input_path ${final_model} \
+    --output_path ${final_model} \
+    --output_type bin
+

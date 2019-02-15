@@ -1,38 +1,76 @@
 #!/bin/sh
 
 slice_num=$1
-slice_db=slice${slice_num}.db
 
-# Creates a tentative SIFT-based db as we need prior matches for SuperPoint matching later on.
-python3 ../colmap-helpers/magic_cmu_to_db.py --slice_num $1
-colmap exhaustive_matcher --database_path ${slice_db}
+image_dir="images"
+sift_db="slice${slice_num}.db"
+new_db="cmu-slice${slice_num}_new.db"
+npz_dir="cmu_npz_sfm"
+nvm_file="slice${slice_num}.nvm"
 
-# Query SIFT DB for our localization evaluation algorithms.
-python3 ../colmap-helpers/get_query_db.py --slice_num $1
+match_ratio="85"
+match_file="matches${match_ratio}.txt"
 
-# Import the precomputed features and match them using the prior from the original SIFT db file.
-python3 ../colmap-helpers/features_from_npz.py --npz_dir cmu-suburban_resize-1024_sfm-nms4/slice${slice_num}/database --image_dir images/database/
-ratio=85
-python3 ../colmap-helpers/match_features_with_db_prior.py --database_file ${slice_db} --image_prefix "" --image_dir "images" --npz_dir cmu-suburban_resize-1024_sfm-nms4/slice${slice_num}/ --min_num_matches=15 --num_points_per_frame=3000 --use_ratio_test --ratio_test_values "0.${ratio}"
+temp_model="cmu-slice${slice_num}_temp_model"
+final_model="cmu-slice${slice_num}_model"
 
-sp_db=slice${slice_num}_${ratio}.db
-colmap database_creator --database_path ${sp_db}
-colmap feature_importer --database_path ${sp_db} --image_path images/ --import_path images/
+# Creates a tentative refernece DB for SIFT as we need prior matches later on.
+python3 magic_cmu_to_db.py --slice_num $1
+colmap exhaustive_matcher --database_path ${sift_db}
+
+# Create a query SIFT DB for our localization evaluation algorithms.
+python3 create_cmu_query_db.py --slice_num $1
+
+# Match the new features using the original SIFT-based DB as a prior
+python3 features_from_npz.py \
+    --npz_dir ${spz_dir}/slice${slice_num}/database \
+    --image_dir ${image_dir}/database/
+
+python3 match_features_with_db_prior.py \
+    --database_file ${sift_db} \
+    --image_prefix "" \
+    --image_dir ${image_dir} \
+    --npz_dir ${spz_dir}/slice${slice_num}/ \
+    --min_num_matches 15 \
+    --num_points_per_frame 3000 \
+    --use_ratio_test \
+    --ratio_test_values "0.${match_ratio}"
+
+# Create an empty Colmap DB
+colmap database_creator --database_path ${new_db}
+
+# Import the features
+colmap feature_importer \
+    --database_path ${new_db} \
+    --image_path${image_dir} \
+    --import_path ${image_dir}
+
 # Update the intrinsics using the ones stored in the NVM file.
-python3 ../colmap-helpers/update_db_with_nvm_intrinsics.py --database_file ${sp_db} --nvm_file slice${slice_num}.nvm
+python3 update_db_with_nvm_intrinsics.py \
+    --database_file ${new_db} \
+    --nvm_file ${nvm_file}
+
 # Necessary as no principal points are stored in the NVM file.
-python3 ../colmap-helpers/update_db_cmu_with_intrinsics.py --database_file ${sp_db}
-colmap matches_importer --database_path ${sp_db} --match_list_path matches${ratio}.txt --match_type raw
+python3 update_db_cmu_with_intrinsics.py --database_file ${new_db}
 
-# Import the ground-truth camera poses from the NVM file and build the initial model structure.
-model_dir=model_slice${slice_num}_${ratio}
-mkdir ${model_dir}
-python3 ../colmap-helpers/colmap_model_from_nvm.py --database_file ${sp_db} --nvm_file slice${slice_num}.nvm --output_dir ${model_dir}
+# Import matches as two-view geometries
+colmap matches_importer \
+    --database_path ${new_db} \
+    --match_list_path ${match_file} \
+    --match_type raw
 
-# Use the matches in the DB file to triangulate the 3D features.
-triangulated_dir=triangulated_slice${slice_num}_${ratio}
-mkdir ${triangulated_dir}
-colmap point_triangulator --database_path ${sp_db} \
-  --image_path images/ \
-  --input_path ${model_dir}  \
-  --output_path ${triangulated_dir} \
+# Build an initial model using the camera poses from the NVM file
+mkdir ${temp_model}
+python3 colmap_model_from_nvm.py \
+    --database_file ${new_db} \
+    --nvm_file ${nvm_file} \
+    --output_dir ${temp_model}
+
+# Triangulate the superpoint features using the previously prepared poses
+# and the features matches stored in the DB
+mkdir ${final_model}
+colmap point_triangulator \
+    --database_path ${new_db} \
+    --image_path ${image_dir} \
+    --input_path ${temp_model}  \
+    --output_path ${final_model} \

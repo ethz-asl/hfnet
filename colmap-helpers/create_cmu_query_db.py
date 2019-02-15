@@ -16,24 +16,17 @@ def parse_args():
 def main():
     args = parse_args()
 
-    db = db_handling.COLMAPDatabase.connect(f'slice{args.slice_num}.db')
+    db = db_handling.COLMAPDatabase.connect(
+        f'cmu_query_slice{args.slice_num}.db')
     db.create_tables()
 
-    camera_model = 2
-    w = 1024
-    h = 768
+    with open(f'slice{args.slice_num}.queries_with_intrinsics.txt') as f:
+        for line in f:
+            name, _, h, w, fx, fy, cx, cy = line.split(' ')
 
-    with open(f'slice{args.slice_num}.nvm') as f:
-        f.readline()
-        total_num_images = int(f.readline())
-        for _, line in zip(range(total_num_images), f):
-            line = line.split(' ')
-            name, focal, dist = line[0], line[1], line[9]
-
-            #  <Camera> = <name> <focal> <quat WXYZ> <translation> <dist> 0
-            params = np.array([float(focal), h/2, w/2, float(dist)])
-            camera_id = db.add_camera(camera_model, h, w, params)
-            image_id = db.add_image(name, camera_id)
+            params = np.array([float(fx), float(fy), float(cx), float(cy)])
+            camera_id = db.add_camera(1, int(h), int(w), params)
+            image_id = db.add_image(path.join('images', name), camera_id)
 
             featurefile = path.join('sift', path.splitext(name)[0] + '.sift')
             with open(featurefile, 'rb') as f:
@@ -59,7 +52,7 @@ def main():
             db.add_keypoints(image_id, keypoints)
             db.add_descriptors(image_id, descriptors)
 
-        db.commit()
+    db.commit()
 
 
 if __name__ == '__main__':
