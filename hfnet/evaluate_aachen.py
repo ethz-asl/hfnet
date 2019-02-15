@@ -53,7 +53,6 @@ configs_local = {
         'nms_thresh': 4,
         'num_features': 2000,
         'ratio_thresh': 0.9,
-        'nms_refinement': False,
     },
     'hfnet': {
         'db_name': 'localdb_hf_glm-bdd_lrsteps.pkl',
