@@ -3,10 +3,14 @@
 slice_num=$1
 
 image_dir="images"
-sift_db="slice${slice_num}.db"
+sift_ref_db="slice${slice_num}.db"
+sift_query_db="query_slice${slice_num}.db"
 new_db="cmu-slice${slice_num}_new.db"
 npz_dir="cmu_npz_sfm"
 nvm_file="slice${slice_num}.nvm"
+
+sift_feature_dir="sift/sift_descriptors"
+query_txt_file="slice${slice_num}.queries_with_intrinsics.txt"
 
 match_ratio="85"
 match_file="matches${match_ratio}.txt"
@@ -14,12 +18,20 @@ match_file="matches${match_ratio}.txt"
 temp_model="cmu-slice${slice_num}_temp_model"
 final_model="cmu-slice${slice_num}_model"
 
-# Creates a tentative refernece DB for SIFT as we need prior matches later on.
-python3 magic_cmu_to_db.py --slice_num $1
-colmap exhaustive_matcher --database_path ${sift_db}
+
+# Creates a tentative reference DB for SIFT as we need prior matches later on.
+python3 magic_cmu_to_db.py \
+    --sift_feature_dir ${sift_feature_dir} \
+    --nvm_file ${nvm_file}\
+    --database_file ${sift_ref_db}
+
+colmap exhaustive_matcher --database_path ${sift_ref_db}
 
 # Create a query SIFT DB for our localization evaluation algorithms.
-python3 create_cmu_query_db.py --slice_num $1
+python3 create_cmu_query_db.py
+    --sift_feature_dir ${sift_feature_dir} \
+    --query_txt_file ${query_txt_file}\
+    --database_file ${sift_query_db}
 
 # Match the new features using the original SIFT-based DB as a prior
 python3 features_from_npz.py \
@@ -27,7 +39,7 @@ python3 features_from_npz.py \
     --image_dir ${image_dir}/database/
 
 python3 match_features_with_db_prior.py \
-    --database_file ${sift_db} \
+    --database_file ${sift_ref_db} \
     --image_prefix "" \
     --image_dir ${image_dir} \
     --npz_dir ${spz_dir}/slice${slice_num}/ \

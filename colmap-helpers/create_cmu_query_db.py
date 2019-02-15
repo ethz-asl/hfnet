@@ -8,19 +8,19 @@ from internal import db_handling
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--slice_num', type=int, required=True)
+    parser.add_argument('--sift_feature_dir', required=True)
+    parser.add_argument('--query_txt_file',  required=True)
+    parser.add_argument('--database_file',  required=True)
     args = parser.parse_args()
     return args
 
 
 def main():
     args = parse_args()
-
-    db = db_handling.COLMAPDatabase.connect(
-        f'cmu_query_slice{args.slice_num}.db')
+    db = db_handling.COLMAPDatabase.connect(args.database_file)
     db.create_tables()
 
-    with open(f'slice{args.slice_num}.queries_with_intrinsics.txt') as f:
+    with open(args.query_txt_file) as f:
         for line in f:
             name, _, h, w, fx, fy, cx, cy = line.split(' ')
 
@@ -28,7 +28,8 @@ def main():
             camera_id = db.add_camera(1, int(h), int(w), params)
             image_id = db.add_image(path.join('images', name), camera_id)
 
-            featurefile = path.join('sift', path.splitext(name)[0] + '.sift')
+            featurefile = path.join(args.sift_feature_dir,
+                                    path.splitext(name)[0] + '.sift')
             with open(featurefile, 'rb') as f:
                 data = f.read()
 

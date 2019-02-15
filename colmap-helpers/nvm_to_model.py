@@ -20,7 +20,8 @@ from internal.db_handling import blob_to_array
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--slice', required=True)
+    parser.add_argument('--database_file', required=True)
+    parser.add_argument('--nvm_file', required=True)
     parser.add_argument('--output_dir', required=True)
     args = parser.parse_args()
     return args
@@ -104,13 +105,13 @@ def export_image_data(image_data, image_idx_to_keypoints,
 
 def main():
     args = parse_args()
-    connection = sqlite3.connect(f'slice{args.slice}.db')
+    connection = sqlite3.connect(args.database_file)
     db = connection.cursor()
 
     image_idx_to_keypoints = defaultdict(list)
     image_idx_to_db_image_id = []
 
-    with open(f'slice{args.slice}.nvm') as f:
+    with open(args.nvm_file) as f:
         # Skip empty lines and read the number of images
         line = f.readline()
         while line == '\n' or line.startswith('NVM_V3'):
