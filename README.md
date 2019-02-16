@@ -17,7 +17,7 @@ This code allows to:
 
 ## Setup
 
-Python 3.6 is required. It is advised to run the following  command within a virtual environment. By default, TensorFlow 1.6 GPU will be installed. You will be prompted to provide the path to a data folder (subsequently referred as `$DATA_PATH`) containing the datasets and pre-trained models and to an experiment folder (`$EXPER_PATH`) containing the trained models, training and evaluation logs, and CNN predictions. Create them wherever you wish and make sure to provide their absolute paths.
+Python 3.6 is required. It is advised to run the following  command within a virtual environment. By default, TensorFlow 1.6 GPU will be installed. You will be prompted to provide the path to a data folder (subsequently referred as `$DATA_PATH`) containing the datasets and pre-trained models and to an experiment folder (`$EXPER_PATH`) containing the trained models, training and evaluation logs, and CNN predictions. Create them wherever you wish and make sure to provide absolute paths.
 ```bash
 make install  # install Python requirements, setup paths
 ```
@@ -30,7 +30,7 @@ We provide a __minimal example of the inference and localization with HF-Net__ i
 
 <p align="center">
   <img src="doc/assets/hfnet.jpg" width="70%"/>
-  <br /><em>HF-Net simultaneously predicts global descriptors and local features with an efficient architecture.</em>
+  <br /><em>HF-Net simultaneously computes global descriptors and local features with an efficient architecture.</em>
 </p>
 
 ## 6-DoF Localization
