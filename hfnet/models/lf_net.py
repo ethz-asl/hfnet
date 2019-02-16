@@ -1,3 +1,9 @@
+""" Based on the original implementation of LF-Net by Y. Ono, E. Trulls,
+    P. Fua, and K.M. Yi.
+    Code: github.com/vcg-uvic/lf-net-release
+    Paper: https://arxiv.org/abs/1805.09662
+"""
+
 import tensorflow as tf
 import numpy as np
 from argparse import Namespace

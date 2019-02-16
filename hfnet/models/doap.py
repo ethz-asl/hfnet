@@ -1,3 +1,9 @@
+""" Implementation of Local Descriptors Optimized for Average Precision (DOAP)
+    by Kun He, Yan Lu, and Stan Sclaroff.
+    Paper: https://arxiv.org/abs/1804.05312
+    Website: http://cs-people.bu.edu/hekun/papers/DOAP/index.html
+"""
+
 import logging
 import scipy.io as scio
 import numpy as np

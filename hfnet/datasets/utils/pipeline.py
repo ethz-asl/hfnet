@@ -1,3 +1,8 @@
+""" Augmentation pipeline by Paul-Edouard Sarlin and Rémi Pautrat (ETH Zurich)
+    for the re-implementation of SuperPoint (DeTone et al.).
+    Code: github.com/rpautrat/SuperPoint
+"""
+
 import tensorflow as tf
 import cv2 as cv
 import numpy as np

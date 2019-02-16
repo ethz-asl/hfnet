@@ -1,11 +1,11 @@
-import numpy as np
-import torch
-
 """ Based on the original implementation of SuperPoint by Daniel DeTone
     and Tomasz Malisiewicz (Magic Leap, Inc.).
     Code: github.com/MagicLeapResearch/SuperPointPretrainedNetwork
     Paper: https://arxiv.org/abs/1712.07629
 """
+
+import numpy as np
+import torch
 
 
 class SuperPointNet(torch.nn.Module):
