@@ -89,7 +89,7 @@ python3 hfnet/evaluate_cmu.py \
 	--export_poses
 ```
 
-The localization parameters can be adjusted in `hfnet/evaluate[aachen|robotcar|cmu].py`. The evaluation logs and estimated poses are written to `$EXPER_PATH/eval/[aachen|robotcar|cmu]/<eval_name>*`. Of particular interest are the PnP+RANSAC success rate, the average number of inliers per query, and the average inlier ratio.
+The localization parameters can be adjusted in `hfnet/evaluate_[aachen|robotcar|cmu].py`. The evaluation logs and estimated poses are written to `$EXPER_PATH/eval/[aachen|robotcar|cmu]/<eval_name>*`. Of particular interest are the PnP+RANSAC success rate, the average number of inliers per query, and the average inlier ratio.
 
 #### Visualization
 
