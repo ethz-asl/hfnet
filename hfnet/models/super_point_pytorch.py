@@ -1,18 +1,11 @@
+""" Based on the original implementation of SuperPoint by Daniel DeTone
+    and Tomasz Malisiewicz (Magic Leap, Inc.).
+    Code: github.com/MagicLeapResearch/SuperPointPretrainedNetwork
+    Paper: https://arxiv.org/abs/1712.07629
+"""
+
 import numpy as np
-import argparse
-import yaml
-import logging
-from pathlib import Path
-from tqdm import tqdm
-
 import torch
-
-logging.basicConfig(format='[%(asctime)s %(levelname)s] %(message)s',
-                    datefmt='%m/%d/%Y %H:%M:%S',
-                    level=logging.INFO)
-from hfnet.datasets import get_dataset  # noqa: E402
-from hfnet.utils import tools  # noqa: E402
-from hfnet.settings import EXPER_PATH, DATA_PATH  # noqa: E402
 
 
 class SuperPointNet(torch.nn.Module):
@@ -77,13 +70,10 @@ class SuperPointFrontend:
         self.cell = 8 # Size of each output cell. Keep this fixed.
         self.border_remove = 4 # Remove points this close to the border.
 
-        weights_path = Path(DATA_PATH, 'weights/superpoint_v1.pth').as_posix()
         self.net = SuperPointNet()
-        self.net.load_state_dict(torch.load(weights_path))
-        self.net = self.net.cuda()
-        # self.net.load_state_dict(torch.load(
-            # weights_path, map_location=lambda storage, loc: storage))
         self.net.eval()
+        # self.net.load_state_dict(torch.load(weights_path))
+        self.net = self.net.cuda()
 
     def nms_fast(self, in_corners, H, W, dist_thresh):
         """
@@ -184,44 +174,31 @@ class SuperPointFrontend:
             toremoveH = np.logical_or(pts[1, :] < bord, pts[1, :] >= (H-bord))
             toremove = np.logical_or(toremoveW, toremoveH)
             pts = pts[:, ~toremove]
+
+        descriptor_map = coarse_desc.detach().cpu().numpy()[0]
         ret = {'keypoints': pts[:2].T.astype(np.int),
-               'local_descriptor_map': np.rollaxis(coarse_desc.detach().cpu().numpy()[0], 0, 3),
+               'local_descriptor_map': np.rollaxis(descriptor_map, 0, 3),
                'dense_scores': np.rollaxis(dense, 0, 3),
                'scores': pts[2]}
         return ret
 
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('config', type=str)
-    parser.add_argument('export_name', type=str)
-    parser.add_argument('--exper_name', type=str)
-    parser.add_argument('--as_dataset', action='store_true')
-    parser.add_argument('--keys', type=str, default='*')
-    args = parser.parse_args()
+class SuperPointPytorch:
+    def __init__(self, data_shape=None, **config):
+        self.net = SuperPointFrontend(config)
 
-    export_name = args.export_name
-    exper_name = args.exper_name
-    with open(args.config, 'r') as f:
-        config = yaml.load(f)
+    def load(self, checkpoint_path):
+        pass
+        self.net.net.load_state_dict(torch.load(checkpoint_path))
 
-    if args.as_dataset:
-        base_dir = Path(DATA_PATH, export_name)
-    else:
-        base_dir = Path(EXPER_PATH, 'exports')
-        base_dir = Path(base_dir, ((exper_name+'/') if exper_name else '') + export_name)
-    base_dir.mkdir(parents=True, exist_ok=True)
+    def predict(self, data, keys='*'):
+        predictions = self.net.run(data['image'])
+        if keys != '*':
+            predictions = {k: predictions[k] for k in keys.split(',')}
+        return predictions
 
-    net = SuperPointFrontend(config['model'])
-    dataset = get_dataset(config['data']['name'])(**config['data'])
-    test_set = dataset.get_test_set()
+    def __enter__(self):
+        return self
 
-    with torch.no_grad():
-        for data in tqdm(test_set):
-            predictions = net.run(data['image'])
-            if args.keys != '*':
-                predictions = {k: predictions[k] for k in args.keys.split(',')}
-            predictions['input_shape'] = data['image'].shape
-            name = data['name'].decode('utf-8')
-            Path(base_dir, Path(name).parent).mkdir(parents=True, exist_ok=True)
-            np.savez(Path(base_dir, '{}.npz'.format(name)), **predictions)
+    def __exit__(self, *args):
+        pass

@@ -1,51 +1,40 @@
-## Building a Colmap model using custom features and matches ##
+# Building SfM models
 
+We provide here scripts to build SfM models for the Aachen, RobotCar, and CMU datasets using [COLMAP](https://colmap.github.io/) and any learned features. While we used SuperPoint keypoints and descriptors, this process should work for any reasonable feature predictor.
 
-### Feature detection and extraction ###
-If you decide to use custom features, we first generate the feature detection/extraction files (one per image) from NPZ Numpy files using the following script:
-```
-python colmap-helpers/features_from_npz.py --npz_dir <npz_directory> --image_dir <image_directory>
-```
-example:
-```
-python colmap-helpers/features_from_npz.py --npz_dir db --image_dir images_upright/db/
-```
+## Exporting dense features
 
-
-### Feature matching ###
-Then, we need to match features across the frames. To speed up this process, we can use the original db file (e.g. using SIFT) to only match the pairs of frames that were matching well with original features.
-```
-python colmap-helpers/match_features_with_db_prior.py --database_file <db_file> --image_prefix db --image_dir <folder_with_images> --output_file <output_file> --min_num_matches=<min_num_matches_in_db> --num_points_per_frame=<points_per_frame>
-```
-example:
-```
-python colmap-helpers/match_features_with_db_prior.py --database_file aachen.db --image_prefix db --image_dir images_upright --output_file matches.txt --min_num_matches=15 --num_points_per_frame=2000
-```
-You can also use ``--debug`` flag for additional debugging.
-
-
-### Generating the Colmap db file ###
-Next, we need to generate the new Colmap db file with our features and matches:
-```
-colmap database_creator --database_path database.db
-colmap feature_importer --database_path database.db --image_path images_upright/ --import_path images_upright/
-colmap matches_importer --database_path database.db --match_list_path matches.txt --match_type raw
+If not already done when evaluating the localization, we first export the network predictions, e.g. dense keypoint scores and descriptors:
+```bash
+python3 hfnet/export_predictions.py \
+	hfnet/configs/hfnet_export_[aachen|cmu|robotcar].yaml \
+	predictions_[aachen|cmu|robotcar] \
+	--exper_name hfnet \
+	--keys keypoints,scores,local_descriptor_map
 ```
 
+This will create an `.npz` file in `$EXPER_PATH/hfnet/predictions_[aachen|cmu|robotcar]/` for each database and query image.
 
-### Using prior image poses ###
-We could now run the sparse reconstruction of Colmap, but we would actually like to reuse the ground-truth database frame poses from the original poses. We therefore provide a script that reads an existing ground-truth NVM model and uses the camera poses to triangulate the 3D points according to custom matches as imported above.
-```
-python colmap-helpers/colmap_model_from_nvm.py --database_file <db_file> --nvm_file <nvm_file> --output_dir <model_output_directory>
-```
-example:
-```
-python colmap-helpers/colmap_model_from_nvm.py --database_file aachen.db --nvm_file aachen_cvpr2018_db.nvm --output_dir new_model/
-```
+## Extracting sparse features
 
+For increased flexibility, we only subsequently extract features using non-maximum suppression (NMS) and bilinear interpolation:
+```bash
+python3 colmap-helpers/export_for_sfm.py \
+	[aachen|cmu|robotcar] \  # dataset name
+	hfnet/predictions_[aachen|cmu|robotcar] \  # input directory
+	hfnet/predictions_[aachen|cmu|robotcar]_sfm  # output directory
+```
+This creates new `.npz` files in `$EXPER_PATH/hfnet/predictions_[aachen|cmu|robotcar]_sfm/`. Parameters for extraction, such as the NMS radius or the number of keypoints, can be adjusted in `colmap-helpers/export_for_sfm.py`. Why this complicated process? We want to keep dense predictions accessible on disk so as to experiment with the extraction parameters when evaluating the localization (e.g. impact of the number of keypoints).
 
-### Model triangulation ###
-Finally, you can triangulate the new model using the standard colmap command:
-```
-colmap point_triangulator --database_path manual.db --image_path <image_directory> --input_path input_model     --output_path triangulated_model
-```
+## Building the model
+
+Assuming we have reference models that contain accurate poses (e.g. from SIFT, as provided by the benchmark authors), we can match keypoints between images and triangulate the 3D points using COLMAP. This is much faster than optimizing all the poses again with bundle adjunstment, and ensures that the estimated query poses are consistent across models.
+
+The process goes as follows:
+- Export `.txt` files containing keypoint locations with `features_from_npz.py`.
+- Match features accross frames with `match_features_with_db_prior.py`. To speed up the process, we use the original SIFT database file to only match frames that are covisible in the SIFT model.
+- Generate a new database file with COLMAP commands `database_creator`, `feature_importer`, and `matches_importer`.
+- Import camera poses from a SIFT NVM model file by creating a dummy intermediate model with `colmap_model_from_nvm.py`.
+- Triangulate the new model with the COLMAP command `point_triangulator`.
+
+As there are some slight variations between the datasets (e.g. importing intrinsics from the SIFT database or from an NVM model), we provide **reference** scripts in `example_scripts/`. Paths might need to be adjusted to work in your workspace.

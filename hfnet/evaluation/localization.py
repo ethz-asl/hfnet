@@ -51,6 +51,7 @@ class Localization:
         if 'colmap_db_queries' in config['local']:
             db_path = Path(base_path, config['local']['colmap_db_queries'])
             config['local']['colmap_db_queries'] = db_path.as_posix()
+        Path(base_path, 'databases').mkdir(exist_ok=True)
         global_path = Path(base_path, 'databases', config['global']['db_name'])
         local_path = Path(base_path, 'databases', config['local']['db_name'])
 

@@ -1,34 +1,83 @@
 #!/bin/sh
 
-rm images/overcast-reference/left/*.txt
-rm images/overcast-reference/right/*.txt
-rm images/overcast-reference/rear/*.txt
+image_dir="images"
+sift_db="overcast-reference.db"
+new_db="robotcar_new.db"
+npz_dir="robotcar_npz_sfm"
+nvm_file="all.nvm"
 
-# Import precomputed features.
-python colmap-helpers/features_from_npz.py --npz_dir robotcar_resize-960_sfm-nms4/overcast-reference/left/ --image_dir images/overcast-reference/left/
-python colmap-helpers/features_from_npz.py --npz_dir robotcar_resize-960_sfm-nms4/overcast-reference/right/ --image_dir images/overcast-reference/right/
-python colmap-helpers/features_from_npz.py --npz_dir robotcar_resize-960_sfm-nms4/overcast-reference/rear/ --image_dir images/overcast-reference/rear/
+match_ratio="85"
+match_file="matches${match_ratio}.txt"
 
-rm matches*.txt
+temp_model="robotcar_temp_model"
+final_model="robotcar_new_model"
 
-# Use the original SIFT-based DB as a prior and match the superpoint features.
-python colmap-helpers/match_features_with_db_prior.py --database_file overcast-reference.db --image_prefix "" --image_dir images/ --npz_dir robotcar_resize-960_sfm-nms4 --min_num_matches=15 --num_points_per_frame=3000 --use_ratio_test --ratio_test_values "0.85"
+# Removove old feature and matches txt files
+rm ${image_dir}/overcast-reference/left/*.txt
+rm ${image_dir}/overcast-reference/right/*.txt
+rm ${image_dir}/overcast-reference/rear/*.txt
+rm ${match_file}
 
-# Create a COLMAP DB, import features, update intrinsics and import matches as two-view geometries.
-rm robotcar85.db
-colmap database_creator --database_path robotcar85.db
-colmap feature_importer --database_path robotcar85.db --image_path images/ --import_path images/
-python colmap-helpers/update_db_with_nvm_intrinsics.py --database_file robotcar85.db --nvm_file all.nvm
-python colmap-helpers/update_db_intrinsics_from_another_db.py --intrinsics_database_file overcast-reference.db --database_file_to_modify robotcar85.db
-colmap matches_importer --database_path robotcar85.db --match_list_path matches85.txt --match_type raw
+# Export txt file for the features
+python3 features_from_npz.py \
+    --npz_dir ${npz_dir}/overcast-reference/left/ \
+    --image_dir ${image_dir}/overcast-reference/left/
 
-# Build an initial model using the camera poses from the NVM file.
-mkdir model_robotcar85_nms4
-python colmap-helpers/colmap_model_from_nvm.py --database_file robotcar85.db --nvm_file all.nvm --output_dir model_robotcar85_nms4/
+python3 features_from_npz.py \
+    --npz_dir ${npz_dir}/overcast-reference/right/ \
+    --image_dir ${image_dir}/overcast-reference/right/
 
-# Triangulate the superpoint features using the previously prepared poses and the features matches stored in DB. COLMAP model will be the output.
-mkdir triangulated_model_robotcar85_nms4
-colmap point_triangulator --database_path robotcar85.db \
-  --image_path images/ \
-  --input_path model_robotcar85_nms4  \
-  --output_path triangulated_model_robotcar85_nms4
+python3 features_from_npz.py \
+    --npz_dir ${npz_dir}/overcast-reference/rear/ \
+    --image_dir ${image_dir}/overcast-reference/rear/
+
+# Match the new features using the original SIFT-based DB as a prior
+python3 match_features_with_db_prior.py \
+    --database_file ${sift_db} \
+    --image_prefix "" \
+    --image_dir ${image_dir} \
+    --npz_dir ${npz_dir} \
+    --min_num_matches 15 \
+    --num_points_per_frame 3000 \
+    --use_ratio_test \
+    --ratio_test_values "0.${match_ratio}"
+
+# Create an empty Colmap DB
+colmap database_creator --database_path ${new_db}
+
+# Import the features
+colmap feature_importer \
+    --database_path ${new_db} \
+    --image_path ${image_dir} \
+    --import_path ${image_dir}
+
+# Update the intrinsics
+python3 update_db_with_nvm_intrinsics.py \
+    --database_file ${new_db} \
+    --nvm_file ${nvm_file}
+
+python3 update_db_intrinsics_from_another_db.py \
+    --intrinsics_database_file ${sift_db} \
+    --database_file_to_modify ${new_db}
+
+# Import matches as two-view geometries
+colmap matches_importer \
+    --database_path ${new_db} \
+    --match_list_path ${match_file} \
+    --match_type raw
+
+# Build an initial model using the camera poses from the NVM file
+mkdir ${temp_model}
+python3 colmap_model_from_nvm.py \
+    --database_file ${new_db} \
+    --nvm_file ${nvm_file} \
+    --output_dir ${temp_model}
+
+# Triangulate the superpoint features using the previously prepared poses
+# and the features matches stored in the DB
+mkdir ${final_model}
+colmap point_triangulator \
+    --database_path ${new_db} \
+    --image_path ${image_dir} \
+    --input_path ${temp_model} \
+    --output_path ${final_model}

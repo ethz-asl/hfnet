@@ -9,8 +9,8 @@ from internal import db_handling
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--sift_feature_dir', required=True)
-    parser.add_argument('--nvm_file', required=True)
-    parser.add_argument('--database_file', required=True)
+    parser.add_argument('--query_txt_file',  required=True)
+    parser.add_argument('--database_file',  required=True)
     args = parser.parse_args()
     return args
 
@@ -20,21 +20,13 @@ def main():
     db = db_handling.COLMAPDatabase.connect(args.database_file)
     db.create_tables()
 
-    camera_model = 2
-    w = 1024
-    h = 768
+    with open(args.query_txt_file) as f:
+        for line in f:
+            name, _, h, w, fx, fy, cx, cy = line.split(' ')
 
-    with open(args.nvm_file) as f:
-        f.readline()
-        total_num_images = int(f.readline())
-        for _, line in zip(range(total_num_images), f):
-            line = line.split(' ')
-            name, focal, dist = line[0], line[1], line[9]
-
-            #  <Camera> = <name> <focal> <quat WXYZ> <translation> <dist> 0
-            params = np.array([float(focal), h/2, w/2, float(dist)])
-            camera_id = db.add_camera(camera_model, h, w, params)
-            image_id = db.add_image(name, camera_id)
+            params = np.array([float(fx), float(fy), float(cx), float(cy)])
+            camera_id = db.add_camera(1, int(h), int(w), params)
+            image_id = db.add_image(path.join('images', name), camera_id)
 
             featurefile = path.join(args.sift_feature_dir,
                                     path.splitext(name)[0] + '.sift')
@@ -61,7 +53,7 @@ def main():
             db.add_keypoints(image_id, keypoints)
             db.add_descriptors(image_id, descriptors)
 
-        db.commit()
+    db.commit()
 
 
 if __name__ == '__main__':

@@ -2,7 +2,8 @@ data:
     name: 'hpatches'
     alteration: 'all'
 model:
-    name: 'super_point'
+    name: 'super_point_pytorch'
     nms_radius: 0
     detector_threshold: 0.01
     image_channels: 1
+weights: 'superpoint_v1.pth'
