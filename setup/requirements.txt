@@ -11,3 +11,4 @@ protobuf
 sklearn
 pillow
 deepdish
+torch
