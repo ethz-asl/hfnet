@@ -3,7 +3,7 @@ from tqdm import tqdm
 
 from .utils.keypoints import keypoints_warp_2D, keypoints_warp_3D
 from .utils.misc import div0
-from .metrics import compute_pr, compute_average_precision
+from .utils.metrics import compute_pr, compute_average_precision
 
 
 def compute_correctness(kpts1, kpts2, kpts1_w, kpts2_w, thresh, mutual=True):

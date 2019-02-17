@@ -2,7 +2,7 @@ import numpy as np
 from tqdm import tqdm
 import cv2
 
-from .metrics import compute_pr, compute_average_precision
+from .utils.metrics import compute_pr, compute_average_precision
 from .utils.descriptors import matching
 from .utils.keypoints import keypoints_warp_2D, keypoints_warp_3D
 from .utils.misc import to_homogeneous, angle_error

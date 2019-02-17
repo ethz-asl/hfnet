@@ -1,0 +1,13 @@
+model:
+    name: 'hf_net'
+    image_channels: 1
+    depth_multiplier: 0.75
+    dropout_keep_prob: null
+    global:
+        intermediate_proj: 0
+        dimensionality_reduction: 4096
+        n_clusters: 32
+    local:
+        descriptor_dim: 256
+        #nms_radius: 4
+        #num_keypoints: 1000

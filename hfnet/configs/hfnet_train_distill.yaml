@@ -44,7 +44,7 @@ data:
                 allow_artifacts: true
             valid_border_margin: 9
 model:
-    name: 'hf_net_shared'
+    name: 'hf_net'
     image_channels: 1
     depth_multiplier: 0.75
     dropout_keep_prob: null
