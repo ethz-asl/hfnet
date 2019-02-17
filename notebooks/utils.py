@@ -36,3 +36,11 @@ def plot_images(imgs, titles=None, cmap='brg', ylabel='', normalize=True,
             spine.set_visible(False)
     ax[0].set_ylabel(ylabel, fontsize=labelfont)
     plt.tight_layout()
+
+
+def add_frame(img, c, b=40):
+    """Add a colored frame around an image with color c and thickness b
+    """
+    img = img.copy()
+    img[:, :b] = img[:b, :] = img[:, -b:] = img[-b:, :] = c
+    return img
