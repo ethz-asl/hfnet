@@ -194,7 +194,7 @@ class SuperPointPytorch:
     def predict(self, data, keys='*'):
         predictions = self.net.run(data['image'])
         if keys != '*':
-            predictions = {k: predictions[k] for k in keys.split(',')}
+            predictions = {k: predictions[k] for k in keys}
         return predictions
 
     def __enter__(self):

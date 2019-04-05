@@ -210,7 +210,8 @@ def evaluate(loc, queries, query_dataset, max_iter=None):
     all_stats = []
     query_iter = query_dataset.get_test_set()
 
-    for query_info, query_data in tqdm(zip(queries, query_iter)):
+    for query_info, query_data in tqdm(zip(queries, query_iter),
+                                       total=len(queries)):
         result, stats = loc.localize(query_info, query_data, debug=False)
         results.append(result)
         all_stats.append(stats)
