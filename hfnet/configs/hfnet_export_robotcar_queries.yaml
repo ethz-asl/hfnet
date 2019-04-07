@@ -1,9 +1,11 @@
 data:
     name: 'robotcar'
-    sequences: ['overcast-reference', 'sun', 'dusk', 'night', 'night-rain']
+    sequences: ['sun', 'dusk', 'night', 'night-rain']
     resize_max: 960
 model:
     name: 'hf_net'
     image_channels: 1
     local:
         detector_threshold: 0.005
+        nms_radius: 4
+        num_keypoints: 2500

@@ -233,10 +233,10 @@ class HfNet(BaseModel):
             keypoints = keypoints[..., ::-1]  # x-y convention
             with tf.name_scope('descriptor_sampling'):
                 desc = ret['local_descriptor_map']
-                scaling = ((tf.to_float(tf.shape(desc)[1:3]) - 1.)
-                           / (tf.to_float(tf.shape(image)[1:3]) - 1.))
+                scaling = ((tf.cast(tf.shape(desc)[1:3], tf.float64) - 1.)
+                           / (tf.cast(tf.shape(image)[1:3], tf.float64) - 1.))
                 local_descriptors = tf.contrib.resampler.resampler(
-                    desc, scaling*tf.to_float(keypoints))
+                    desc, tf.to_float(scaling)[::-1]*tf.to_float(keypoints))
                 local_descriptors = tf.nn.l2_normalize(local_descriptors, -1)
             ret = {**ret, 'keypoints': keypoints, 'scores': scores,
                    'local_descriptors': local_descriptors}

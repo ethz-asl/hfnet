@@ -7,9 +7,10 @@ def image_normalization(image, pixel_value_offset=128.0, pixel_value_scale=128.0
     return tf.div(tf.subtract(image, pixel_value_offset), pixel_value_scale)
 
 
-def simple_nms(scores, radius):
-    """Performs non maximum suppression on the heatmap using max-pooling.
+def simple_nms(scores, radius, iterations=3):
+    """Performs non maximum suppression (NMS) on the heatmap using max-pooling.
     This method does not suppress contiguous points that have the same score.
+    It is an approximate of the standard NMS and uses iterative propagation.
     Arguments:
         scores: the score heatmap, with shape `[B, H, W]`.
         size: an interger scalar, the radius of the NMS window.
@@ -17,11 +18,18 @@ def simple_nms(scores, radius):
     with tf.name_scope('simple_nms'):
         radius = tf.constant(radius, name='radius')
         size = radius*2 + 1
-        pooled = gen_nn_ops.max_pool_v2(  # supports dynamic ksize
-                scores[..., None], ksize=[1, size, size, 1],
+
+        max_pool = lambda x: gen_nn_ops.max_pool_v2(  # supports dynamic ksize
+                x[..., None], ksize=[1, size, size, 1],
                 strides=[1, 1, 1, 1], padding='SAME')[..., 0]
-        ret = tf.where(tf.equal(scores, pooled), scores, tf.zeros_like(scores))
-    return ret
+        zeros = tf.zeros_like(scores)
+        max_mask = tf.equal(scores, max_pool(scores))
+        for _ in range(iterations-1):
+            supp_mask = tf.cast(max_pool(tf.to_float(max_mask)), tf.bool)
+            supp_scores = tf.where(supp_mask, zeros, scores)
+            new_max_mask = tf.equal(supp_scores, max_pool(supp_scores))
+            max_mask = max_mask | (new_max_mask & tf.logical_not(supp_mask))
+        return tf.where(max_mask, scores, zeros)
 
 
 def delf_attention(feature_map, config, is_training, arg_scope=None):

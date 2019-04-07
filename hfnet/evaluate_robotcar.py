@@ -14,7 +14,7 @@ from hfnet.settings import EXPER_PATH
 configs_global = {
     'netvlad': {
         'db_name': 'globaldb_netvlad.pkl',
-        'experiment': 'netvlad/robotcar_resize-960',
+        'experiment': 'netvlad/robotcar',
         'predictor': export_loader,
         'has_keypoints': False,
         'has_descriptors': False,
@@ -22,8 +22,8 @@ configs_global = {
         'num_prior': 10,
     },
     'hfnet': {
-        'db_name': 'globaldb_hf_glm-bdd_lrsteps.pkl',
-        'experiment':  'hfnet-shared_weights-unc_aug-photo_glm-bdd_lrsteps/robotcar_resize-960',
+        'db_name': 'globaldb_hfnet.pkl',
+        'experiment':  'hfnet/robotcar',
         'predictor': export_loader,
         'has_keypoints': False,
         'has_descriptors': False,
@@ -34,19 +34,19 @@ configs_global = {
 
 configs_local = {
     'superpoint': {
-        'db_name': 'localdb_sp-nms4_focal-from-ref-db_shift-kpts.pkl',
-        'experiment': 'super_point_pytorch/robotcar_resize-960',
+        'db_name': 'localdb_superpoint.pkl',
+        'experiment': 'superpoint/robotcar',
         'predictor': export_loader,
         'has_keypoints': True,
         'has_descriptors': True,
         'binarize': False,
-        'do_nms': True,
-        'nms_thresh': 4,
+        # 'do_nms': True,
+        # 'nms_thresh': 4,
         'num_features': 2000,
         'ratio_thresh': 0.9,
     },
     'sift': {
-        'db_name': 'localdb_sift_raw.pkl',
+        'db_name': 'localdb_sift.pkl',
         'colmap_db': 'overcast-reference.db',
         'colmap_db_queries': 'query.db',
         'broken_db': True,
@@ -55,13 +55,13 @@ configs_local = {
         'fast_matching': False,
     },
     'hfnet': {
-        'db_name': 'localdb_hf_glm-bdd_lrsteps_focal-from-ref-db_shift-kpts.pkl',
-        'experiment':  'hfnet-shared_weights-unc_aug-photo_glm-bdd_lrsteps/robotcar_resize-960',
+        'db_name': 'localdb_hfnet.pkl',
+        'experiment':  'hfnet/robotcar',
         'predictor': export_loader,
         'has_keypoints': True,
         'has_descriptors': True,
-        'do_nms': True,
-        'nms_thresh': 4,
+        # 'do_nms': True,
+        # 'nms_thresh': 4,
         'num_features': 2000,
         'ratio_thresh': 0.9,
     },

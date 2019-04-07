@@ -13,8 +13,8 @@ from hfnet.settings import EXPER_PATH
 
 configs_global = {
     'netvlad': {
-        'db_name': 'globaldb_netvlad_02-07.pkl',
-        'experiment': 'netvlad/cmu_resize-1024',
+        'db_name': 'globaldb_netvlad.pkl',
+        'experiment': 'netvlad/cmu',
         'predictor': export_loader,
         'has_keypoints': False,
         'has_descriptors': False,
@@ -22,8 +22,8 @@ configs_global = {
         'num_prior': 10,
     },
     'hfnet': {
-        'db_name': 'globaldb_hf_glm-bdd_lrsteps_02-07.pkl',
-        'experiment': 'hfnet-shared_weights-unc_aug-photo_glm-bdd_lrsteps/cmu_resize-1024',
+        'db_name': 'globaldb_hfnet.pkl',
+        'experiment': 'hfnet/cmu',
         'predictor': export_loader,
         'has_keypoints': False,
         'has_descriptors': False,
@@ -34,14 +34,14 @@ configs_global = {
 
 configs_local = {
     'superpoint': {
-        'db_name': 'localdb_sp-nms4-ratio85_focal-from-ref-db.pkl',
-        'experiment': 'super_point_pytorch/cmu_resize-1024',
+        'db_name': 'localdb_superpoint.pkl',
+        'experiment': 'superpoint/cmu',
         'predictor': export_loader,
         'has_keypoints': True,
         'has_descriptors': True,
         'binarize': False,
-        'do_nms': True,
-        'nms_thresh': 4,
+        # 'do_nms': True,
+        # 'nms_thresh': 4,
         'num_features': 2000,
         'ratio_thresh': 0.9,
     },
@@ -55,13 +55,13 @@ configs_local = {
         'fast_matching': False,
     },
     'hfnet': {
-        'db_name': 'localdb_hf_glm-bdd_lrsteps_focal-from-ref-db.pkl',
-        'experiment': 'hfnet-shared_weights-unc_aug-photo_glm-bdd_lrsteps/cmu_resize-1024',
+        'db_name': 'localdb_hfnet.pkl',
+        'experiment': 'hfnet/cmu',
         'predictor': export_loader,
         'has_keypoints': True,
         'has_descriptors': True,
-        'do_nms': True,
-        'nms_thresh': 4,
+        # 'do_nms': True,
+        # 'nms_thresh': 4,
         'num_features': 2000,
         'ratio_thresh': 0.9,
     },

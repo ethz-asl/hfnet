@@ -1,0 +1,14 @@
+data:
+    name: 'cmu'
+    sequences: ['slice2', 'slice3', 'slice4', 'slice5', 'slice6', 'slice7',
+                'slice8', 'slice9', 'slice10', 'slice17']
+    load_db: false
+    load_queries: true
+    resize_max: 1024
+model:
+    name: 'hf_net'
+    image_channels: 1
+    local:
+        detector_threshold: 0.005
+        nms_radius: 4
+        num_keypoints: 2500

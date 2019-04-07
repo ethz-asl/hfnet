@@ -1,0 +1,11 @@
+data:
+    name: 'aachen'
+    load_db: true
+    load_queries: false
+    resize_max: 960
+    grayscale: true
+model:
+    name: 'hf_net'
+    image_channels: 1
+    local:
+        detector_threshold: 0.005

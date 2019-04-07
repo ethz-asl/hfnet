@@ -1,6 +1,6 @@
 data:
     name: 'aachen'
-    load_db: true
+    load_db: false
     load_queries: true
     resize_max: 960
     grayscale: true
@@ -9,3 +9,5 @@ model:
     image_channels: 1
     local:
         detector_threshold: 0.005
+        nms_radius: 4
+        num_keypoints: 2500

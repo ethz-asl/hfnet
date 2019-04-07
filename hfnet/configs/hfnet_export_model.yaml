@@ -9,5 +9,6 @@ model:
         n_clusters: 32
     local:
         descriptor_dim: 256
-        #nms_radius: 4
-        #num_keypoints: 1000
+        detector_threshold: 0.005
+        nms_radius: 4
+        num_keypoints: 1000

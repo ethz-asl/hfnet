@@ -1,6 +1,6 @@
 data:
     name: 'aachen'
-    load_db: true
+    load_db: false
     load_queries: true
     resize_max: 960
 model:
@@ -8,4 +8,6 @@ model:
     nms_radius: 0
     detector_threshold: 0.005
     image_channels: 1
+    nms_radius: 4
+    num_keypoints: 2500
 weights: 'superpoint_v1.pth'

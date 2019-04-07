@@ -74,7 +74,7 @@ def export_loader(image, name, experiment, **config):
     nms_thresh = config.get('nms_thresh', 4)
     keypoint_refinement = config.get('keypoint_refinement', False)
     binarize = config.get('binarize', False)
-    entries = ['keypoints', 'scores', 'descriptors']
+    entries = ['keypoints', 'scores', 'descriptors', 'local_descriptors']
 
     name = name.decode('utf-8') if isinstance(name, bytes) else name
     path = Path(EXPER_PATH, 'exports', experiment, name+'.npz')
@@ -110,11 +110,17 @@ def export_loader(image, name, experiment, **config):
         keep = np.argsort(pred['scores'])[::-1][:num_features]
         pred = {**pred,
                 **{k: v[keep] for k, v in pred.items() if k in entries}}
-    if has_descriptors and 'descriptors' not in pred:
-        pred['descriptors'] = sample_descriptors(
-            pred['local_descriptor_map'], pred['keypoints'], image_shape,
-            input_shape=pred['input_shape'][:2] if 'input_shape' in pred
-            else None)
+    if has_descriptors:
+        if 'descriptors' in pred:
+            pass
+        elif 'local_descriptors' in pred:
+            pred['descriptors'] = pred['local_descriptors']
+        else:
+            assert 'local_descriptor_map' in pred
+            pred['descriptors'] = sample_descriptors(
+                pred['local_descriptor_map'], pred['keypoints'], image_shape,
+                input_shape=pred['input_shape'][:2] if 'input_shape' in pred
+                else None)
     if binarize:
         pred['descriptors'] = pred['descriptors'] > 0
     return pred

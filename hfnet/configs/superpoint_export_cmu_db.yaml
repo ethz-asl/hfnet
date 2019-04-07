@@ -3,7 +3,7 @@ data:
     sequences: ['slice2', 'slice3', 'slice4', 'slice5', 'slice6', 'slice7',
                 'slice8', 'slice9', 'slice10', 'slice17']
     load_db: true
-    load_queries: true
+    load_queries: false
     resize_max: 1024
 model:
     name: 'super_point_pytorch'

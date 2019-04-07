@@ -65,10 +65,14 @@ class SuperPointNet(torch.nn.Module):
 
 class SuperPointFrontend:
     def __init__(self, config):
-        self.nms_dist = config['nms_radius']
-        self.conf_thresh = config['detector_threshold']
+        self.config = {
+            'nms_radius': 0,
+            'detector_threshold': 0,
+            'num_keypoints': 0,
+            'border_remove': 4,
+        }
+        self.config.update(config)
         self.cell = 8 # Size of each output cell. Keep this fixed.
-        self.border_remove = 4 # Remove points this close to the border.
 
         self.net = SuperPointNet()
         self.net.eval()
@@ -146,38 +150,62 @@ class SuperPointFrontend:
         outs = self.net.forward(inp.cuda())
         semi, coarse_desc = outs[0], outs[1]
         semi = semi.data.cpu().numpy().squeeze()
-        # --- Process points.
-        dense = np.exp(semi) # Softmax.
-        dense = dense / (np.sum(dense, axis=0)+.00001) # Should sum to 1.
-        # Remove dustbin.
-        nodust = dense[:-1, :, :]
+
+        dense = np.exp(semi)  # Softmax.
+        dense = dense / (np.sum(dense, axis=0)+.00001)  # Should sum to 1.
+        nodust = dense[:-1, :, :]  # Remove dustbin.
+
         # Reshape to get full resolution heatmap.
-        Hc = int(H / self.cell)
-        Wc = int(W / self.cell)
+        Hc, Wc = int(H / self.cell), int(W / self.cell)
         nodust = nodust.transpose(1, 2, 0)
         heatmap = np.reshape(nodust, [Hc, Wc, self.cell, self.cell])
         heatmap = np.transpose(heatmap, [0, 2, 1, 3])
         heatmap = np.reshape(heatmap, [Hc*self.cell, Wc*self.cell])
-        xs, ys = np.where(heatmap >= self.conf_thresh) # Confidence threshold.
-        pts = np.zeros((3, len(xs))) # Populate point data sized 3xN.
+
+        xs, ys = np.where(heatmap >= self.config['detector_threshold'])
+        pts = np.zeros((3, len(xs)))  # Populate point data sized 3xN.
+        D = coarse_desc.shape[1]
         if len(xs) > 0:
             pts[0, :] = ys
             pts[1, :] = xs
             pts[2, :] = heatmap[xs, ys]
-            if self.nms_dist:
-                pts, _ = self.nms_fast(pts, H, W, dist_thresh=self.nms_dist) # Apply NMS.
-            inds = np.argsort(pts[2,:])
-            pts = pts[:,inds[::-1]] # Sort by confidence.
+
+            if self.config['nms_radius']:
+                pts, _ = self.nms_fast(
+                    pts, H, W, dist_thresh=self.config['nms_radius'])
+            inds = np.argsort(pts[2, :])
+            pts = pts[:, inds[::-1]]  # Sort by confidence.
+
             # Remove points along border.
-            bord = self.border_remove
+            bord = self.config['border_remove']
             toremoveW = np.logical_or(pts[0, :] < bord, pts[0, :] >= (W-bord))
             toremoveH = np.logical_or(pts[1, :] < bord, pts[1, :] >= (H-bord))
             toremove = np.logical_or(toremoveW, toremoveH)
             pts = pts[:, ~toremove]
 
+            if self.config['num_keypoints']:
+                pts = pts[:, :self.config['num_keypoints']]
+
+            samp_pts = torch.from_numpy(pts[:2, :].copy())
+            samp_pts[0, :] /= (W - 1.)
+            samp_pts[1, :] /= (H - 1.)
+            samp_pts = samp_pts * 2 - 1
+
+            samp_pts = samp_pts.transpose(0, 1).contiguous()
+            samp_pts = samp_pts.view(1, 1, -1, 2)
+            samp_pts = samp_pts.float().cuda()
+            descriptors = torch.nn.functional.grid_sample(coarse_desc, samp_pts)
+            norm = torch.norm(descriptors, p=2, dim=1, keepdim=True)
+            descriptors = descriptors / norm
+            descriptors = descriptors.detach().cpu().numpy().reshape(D, -1)
+        else:
+            descriptors = np.zeros((D, 0))
+
         descriptor_map = coarse_desc.detach().cpu().numpy()[0]
+
         ret = {'keypoints': pts[:2].T.astype(np.int),
                'local_descriptor_map': np.rollaxis(descriptor_map, 0, 3),
+               'local_descriptors': descriptors.T,
                'dense_scores': np.rollaxis(dense, 0, 3),
                'scores': pts[2]}
         return ret
