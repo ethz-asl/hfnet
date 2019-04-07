@@ -1,4 +1,5 @@
-tensorflow-gpu==1.6
+tensorflow-gpu==1.12
+torch==0.4.1
 numpy
 scipy
 opencv-python
@@ -11,4 +12,3 @@ protobuf
 sklearn
 pillow
 deepdish
-torch
