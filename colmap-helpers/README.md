@@ -7,13 +7,13 @@ We provide here scripts to build SfM models for the Aachen, RobotCar, and CMU da
 If not already done when evaluating the localization, we first export the network predictions, e.g. dense keypoint scores and descriptors:
 ```bash
 python3 hfnet/export_predictions.py \
-	hfnet/configs/hfnet_export_[aachen|cmu|robotcar].yaml \
-	predictions_[aachen|cmu|robotcar] \
+	hfnet/configs/hfnet_export_[aachen|cmu|robotcar]_db.yaml \
+	[aachen|cmu|robotcar] \
 	--exper_name hfnet \
 	--keys keypoints,scores,local_descriptor_map
 ```
 
-This will create an `.npz` file in `$EXPER_PATH/hfnet/predictions_[aachen|cmu|robotcar]/` for each database and query image.
+This will create an `.npz` file in `$EXPER_PATH/exports/hfnet/[aachen|cmu|robotcar]/` for each database image.
 
 ## Extracting sparse features
 
@@ -21,10 +21,10 @@ For increased flexibility, we only subsequently extract features using non-maxim
 ```bash
 python3 colmap-helpers/export_for_sfm.py \
 	[aachen|cmu|robotcar] \  # dataset name
-	hfnet/predictions_[aachen|cmu|robotcar] \  # input directory
-	hfnet/predictions_[aachen|cmu|robotcar]_sfm  # output directory
+	hfnet/[aachen|cmu|robotcar] \  # input directory
+	hfnet/[aachen|cmu|robotcar]_sfm  # output directory
 ```
-This creates new `.npz` files in `$EXPER_PATH/hfnet/predictions_[aachen|cmu|robotcar]_sfm/`. Parameters for extraction, such as the NMS radius or the number of keypoints, can be adjusted in `colmap-helpers/export_for_sfm.py`. Why this complicated process? We want to keep dense predictions accessible on disk so as to experiment with the extraction parameters when evaluating the localization (e.g. impact of the number of keypoints).
+This creates new `.npz` files in `$EXPER_PATH/exports/hfnet/[aachen|cmu|robotcar]_sfm/`. Parameters for extraction, such as the NMS radius or the number of keypoints, can be adjusted in `colmap-helpers/export_for_sfm.py`. Why this complicated process? We want to keep dense predictions accessible on disk so as to experiment with the extraction parameters when evaluating the localization (e.g. impact of the number of keypoints).
 
 ## Building the model
 

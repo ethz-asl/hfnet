@@ -1,6 +1,6 @@
 # HF-Net: Robust Hierarchical Localization at Large Scale
 
-This repository accompanies our paper *[From Coarse to Fine: Robust Hierarchical Localization at Large Scale](https://arxiv.org/abs/1812.03506)*. We introduce a 6-DoF visual localization method that is accurate, scalable, and efficient, using HF-Net, a monolithic deep neural network for descriptor extraction. The proposed solution achieves state-of-the-art accuracy on several large-scale public benchmarks while running in real-time.
+This repository accompanies our CVPR 2019 paper *[From Coarse to Fine: Robust Hierarchical Localization at Large Scale](https://arxiv.org/abs/1812.03506)*. We introduce a 6-DoF visual localization method that is accurate, scalable, and efficient, using HF-Net, a monolithic deep neural network for descriptor extraction. The proposed solution achieves state-of-the-art accuracy on several large-scale public benchmarks while running in real-time.
 
 <p align="center">
   <img src="doc/assets/teaser.jpg" width="80%"/>
@@ -17,7 +17,7 @@ This code allows to:
 
 ## Setup
 
-Python 3.6 is required. It is advised to run the following  command within a virtual environment. By default, TensorFlow 1.6 GPU will be installed. You will be prompted to provide the path to a data folder (subsequently referred as `$DATA_PATH`) containing the datasets and pre-trained models and to an experiment folder (`$EXPER_PATH`) containing the trained models, training and evaluation logs, and CNN predictions. Create them wherever you wish and make sure to provide absolute paths.
+Python 3.6 is required. It is advised to run the following  command within a virtual environment. By default, TensorFlow 1.12 GPU will be installed. You will be prompted to provide the path to a data folder (subsequently referred as `$DATA_PATH`) containing the datasets and pre-trained models and to an experiment folder (`$EXPER_PATH`) containing the trained models, training and evaluation logs, and CNN predictions. Create them wherever you wish and make sure to provide absolute paths. PyTorch 0.4.1 is also required to run the original SuperPoint and perform GPU-accelerated feature matching.
 ```bash
 make install  # install Python requirements, setup paths
 ```
@@ -35,6 +35,10 @@ We provide a __minimal example of the inference and localization with HF-Net__ i
 
 ## 6-DoF Localization
 
+<p align="center">
+  <img src="doc/assets/pipeline.jpg" width="70%"/>
+</p>
+
 We provide code to perform and evaluate our hierarchical localization on the three challenging benchmark datasets of [Sattler et al](https://arxiv.org/abs/1707.09092): Aachen Day-Night, RobotCar Seasons, and CMU Seasons.
 
 #### Required assets
@@ -43,12 +47,28 @@ Download the datasets as indicated in the [dataset documentation](doc/datasets.m
 
 #### Exporting the predictions
 
-We first export the predictions for all database and query images as `.npz` files, and subsequently run the localization.
+We first export the local features and global descriptors for all database and query images as `.npz` files. For the sake of flexibility, local descriptors are exported as dense maps for database images, but as sparse samples for query images.
+
+For HF-Net or SuperPoint:
 ```bash
 python3 hfnet/export_predictions.py \
-	hfnet/configs/[hfnet|superpoint|netvlad]_export_[aachen|cmu|robotcar].yaml \
-	[hfnet|superpoint|netvlad]/predictions_[aachen|cmu|robotcar] \
-	--keys keypoints,scores,local_descriptor_map,global_descriptor  # adjust depending on model
+	hfnet/configs/[hfnet|superpoint]_export_[aachen|cmu|robotcar]_db.yaml \
+	[superpoint/][aachen|cmu|robotcar] \
+	[--exper_name hfnet] \ # for HF-Net only
+	--keys keypoints,scores,local_descriptor_map[,global_descriptor]
+python3 hfnet/export_predictions.py \
+	hfnet/configs/[hfnet|superpoint]_export_[aachen|cmu|robotcar]_queries.yaml \
+	[superpoint/][aachen|cmu|robotcar] \
+	[--exper_name hfnet] \ # for HF-Net only
+	--keys keypoints,scores,local_descriptors[,global_descriptor]
+```
+
+For NetVLAD:
+```bash
+python3 hfnet/export_predictions.py \
+	hfnet/configs/netvlad_export_[aachen|cmu|robotcar].yaml \
+	netvlad/[aachen|cmu|robotcar] \
+	--keys global_descriptor
 ```
 
 #### Localization
@@ -57,7 +77,7 @@ For Aachen:
 ```bash
 python3 hfnet/evaluate_aachen.py \
 	<sfm_model_name_or_path> \
-	<eval_name> \
+	<eval_name>_[night|day] \
 	--local_method [hfnet|superpoint|sift] \
 	--global_method [hfnet|netvlad] \
 	--build_db \
@@ -111,10 +131,10 @@ Instructions and scripts to build SfM models using [COLMAP](https://colmap.githu
 
 Please consider citing the corresponding publication if you use this work in an academic context:
 ```
-@article{hfnet2018,
+@inproceedings{sarlin2019coarse,
   title={From Coarse to Fine: Robust Hierarchical Localization at Large Scale},
   author={Sarlin, P.-E. and Cadena, C. and Siegwart, R. and Dymczyk, M.},
-  journal={arXiv:1812.03506},
-  year={2018}
+  article={CVPR},
+  year={2019}
 }
 ```
