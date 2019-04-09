@@ -36,7 +36,7 @@ import sqlite3
 from tqdm import tqdm
 
 
-from db_handling import blob_to_array
+from .db_handling import blob_to_array
 
 
 def pair_id_to_image_ids(pair_id):
@@ -57,7 +57,7 @@ def get_matching_images(database_file, min_num_matches, filter_image_dir):
         'SELECT pair_id, data FROM two_view_geometries WHERE rows>=?;',
         (min_num_matches,))
     for pair_id, data in cursor:
-        inlier_matches = blob_to_array(data, np.unit32, shape=(-1, 2))
+        inlier_matches = blob_to_array(data, np.uint32, shape=(-1, 2))
 
         image_id1, image_id2 = pair_id_to_image_ids(pair_id)
         image_name1 = images[image_id1]

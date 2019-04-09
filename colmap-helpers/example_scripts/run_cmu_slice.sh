@@ -35,14 +35,14 @@ python3 create_cmu_query_db.py
 
 # Match the new features using the original SIFT-based DB as a prior
 python3 features_from_npz.py \
-    --npz_dir ${spz_dir}/slice${slice_num}/database \
+    --npz_dir ${npz_dir}/slice${slice_num}/database/ \
     --image_dir ${image_dir}/database/
 
 python3 match_features_with_db_prior.py \
     --database_file ${sift_ref_db} \
     --image_prefix "" \
     --image_dir ${image_dir} \
-    --npz_dir ${spz_dir}/slice${slice_num}/ \
+    --npz_dir ${npz_dir}/slice${slice_num}/ \
     --min_num_matches 15 \
     --num_points_per_frame 3000 \
     --use_ratio_test \
