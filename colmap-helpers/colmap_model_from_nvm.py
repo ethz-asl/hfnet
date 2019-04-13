@@ -97,7 +97,7 @@ def main():
             if line == '\n':
                 continue
             data = convert_image_data(line.split(), name_to_image_id)
-            outfile.write(' '.join(map(str, data)) + '\n')
+            outfile.write(' '.join(map(str, data)) + '\n\n')
             i += 1
         outfile.close()
 

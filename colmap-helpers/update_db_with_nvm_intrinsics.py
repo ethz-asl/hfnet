@@ -29,7 +29,6 @@ def update_db_intrinsics(db_connection, camera_id, focal_length, radial_dist):
     data = cursor.fetchall()
     assert len(data) == 1
     intrinsics = blob_to_array(data[0][0], np.double)
-    cursor.close()
 
     # Update intrinsic values.
     intrinsics[0] = focal_length
@@ -73,6 +72,7 @@ def main():
                 continue
             data = line.split(' ')
             process(data, image_name_to_id_and_camera_id, connection)
+            i += 1
 
     print('Done parsing data for', num_images, 'images.')
     connection.commit()

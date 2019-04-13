@@ -54,7 +54,7 @@ colmap database_creator --database_path ${new_db}
 # Import the features
 colmap feature_importer \
     --database_path ${new_db} \
-    --image_path${image_dir} \
+    --image_path ${image_dir} \
     --import_path ${image_dir}
 
 # Update the intrinsics using the ones stored in the NVM file.
