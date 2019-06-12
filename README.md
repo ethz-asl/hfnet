@@ -2,6 +2,8 @@
 
 This repository accompanies our CVPR 2019 paper *[From Coarse to Fine: Robust Hierarchical Localization at Large Scale](https://arxiv.org/abs/1812.03506)*. We introduce a 6-DoF visual localization method that is accurate, scalable, and efficient, using HF-Net, a monolithic deep neural network for descriptor extraction. The proposed solution achieves state-of-the-art accuracy on several large-scale public benchmarks while running in real-time.
 
+The proposed approach __won the visual localization challenge__ of the [CVPR 2019 workshop on Long-Term Visual Localization](https://sites.google.com/view/ltvl2019/home) using this codebase.
+
 <p align="center">
   <img src="doc/assets/teaser.jpg" width="80%"/>
   <br /><em>Our method is significantly more robust, accurate, and scalable than standard approaches based on direct matching.</em>
@@ -26,7 +28,7 @@ Refer to our [dataset documentation](doc/datasets.md) for an overview of the sup
 
 ## Demo
 
-We provide a __minimal example of the inference and localization with HF-Net__ in [`demo.ipynb`](demo.ipynb). Download the trained model [here](TODO) and unpack it in `$EXPER_PATH/saved_models/`.
+We provide a __minimal example of the inference and localization with HF-Net__ in [`demo.ipynb`](demo.ipynb). Download the trained model [here](https://projects.asl.ethz.ch/datasets/doku.php?id=cvpr2019hfnet) and unpack it in `$EXPER_PATH/saved_models/`.
 
 <p align="center">
   <img src="doc/assets/hfnet.jpg" width="70%"/>
@@ -43,7 +45,7 @@ We provide code to perform and evaluate our hierarchical localization on the thr
 
 #### Required assets
 
-Download the datasets as indicated in the [dataset documentation](doc/datasets.md). We provide SfM models of [Aachen](TODO), [RobotCar](TODO) and [CMU](TODO) built with HF-Net/SuperPoint. Download and unpack the HF-Net weights in `$EXPER_PATH/hfnet/`. To localize with NV+SP, download the network weights of [NetVLAD](http://rpg.ifi.uzh.ch/datasets/netvlad/vd16_pitts30k_conv5_3_vlad_preL2_intra_white.zip) and [SuperPoint](https://github.com/MagicLeapResearch/SuperPointPretrainedNetwork/blob/master/superpoint_v1.pth) and put them in `$DATA_PATH/weights/`.
+Download the datasets as indicated in the [dataset documentation](doc/datasets.md). SfM models of Aachen, RobotCar, CMU, and Extended CMU, built SuperPoint and usable with HF-Net, are provided [here](https://projects.asl.ethz.ch/datasets/doku.php?id=cvpr2019hfnet). Download and unpack the HF-Net weights in `$EXPER_PATH/hfnet/`. To localize with NV+SP, download the network weights of [NetVLAD](http://rpg.ifi.uzh.ch/datasets/netvlad/vd16_pitts30k_conv5_3_vlad_preL2_intra_white.zip) and [SuperPoint](https://github.com/MagicLeapResearch/SuperPointPretrainedNetwork/blob/master/superpoint_v1.pth) and put them in `$DATA_PATH/weights/`.
 
 #### Exporting the predictions
 

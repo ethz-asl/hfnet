@@ -28,12 +28,11 @@ def export_features_from_npz(filename, in_path, out_path):
     outfile.write(str(kp1.shape[0]) + ' ' + str(SIFT_SIZE) + '\n')
 
     for keypoint in kp1:
-        outfile.write(str(keypoint[0]) + ' ' + str(keypoint[1]) + ' 1 1 ')
         # Generate some dummy SIFT values as we will anyway use external
         # from a matches.txt file.
-        for x in range(SIFT_SIZE):
-            outfile.write(str(x) + ' ')
-        outfile.write('\n')
+        s = str(keypoint[0]) + ' ' + str(keypoint[1])
+        s += ' 1 1 ' + '1 '*SIFT_SIZE + '\n'
+        outfile.write(s)
 
     outfile.close()
 
