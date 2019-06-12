@@ -153,7 +153,7 @@ sfm/
 
 ## Multi-task distillation
 
-HF-Net is trained on the Google Landmarks and Berkeley Deep Drive datasets. For the former, first download the [index of images](https://github.com/ethz-asl/hierarchical_loc/releases/download/1.0/google_landmarks_index.csv) and then the dataset itself using the script `setup/scripts/download_google_landmarks.py`. The latter can be downloaded on the [dataset website](https://bdd-data.berkeley.edu/).
+HF-Net is trained on the Google Landmarks and Berkeley Deep Drive datasets. For the former, first download the [index of images](https://github.com/ethz-asl/hierarchical_loc/releases/download/1.0/google_landmarks_index.csv) and then the dataset itself using the script `setup/scripts/download_google_landmarks.py`. The latter can be downloaded on the [dataset website](https://bdd-data.berkeley.edu/) (we used the night and dawn sequences).
 
 The labels are predictions of SuperPoint and NetVLAD. Their export is described in the [training documentation](doc/training.md).
 
