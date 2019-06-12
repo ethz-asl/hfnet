@@ -56,6 +56,7 @@ robotcar/
         ├── images.bin
         └── points3D.bin
 ```
+The query lists generated with `setup/utils/generate_robotcar_query_list.py` are available [here](http://robotics.ethz.ch/~asl-datasets/2019_CVPR_hierarchical_localization/query_lists_robotcar.tar.gz).
 
 #### CMU Seasons
 
