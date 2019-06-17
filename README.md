@@ -2,7 +2,7 @@
 
 This repository accompanies our CVPR 2019 paper *[From Coarse to Fine: Robust Hierarchical Localization at Large Scale](https://arxiv.org/abs/1812.03506)*. We introduce a 6-DoF visual localization method that is accurate, scalable, and efficient, using HF-Net, a monolithic deep neural network for descriptor extraction. The proposed solution achieves state-of-the-art accuracy on several large-scale public benchmarks while running in real-time.
 
-The proposed approach __won the visual localization challenge__ of the [CVPR 2019 workshop on Long-Term Visual Localization](https://sites.google.com/view/ltvl2019/home) using this codebase.
+The proposed approach __won the visual localization challenge__ of the [CVPR 2019 workshop on Long-Term Visual Localization](https://sites.google.com/view/ltvl2019/home) using this codebase. We also provide [trained weights for HF-Net and reconstructed SfM 3D models](https://projects.asl.ethz.ch/datasets/doku.php?id=cvpr2019hfnet).
 
 <p align="center">
   <img src="doc/assets/teaser.jpg" width="80%"/>
