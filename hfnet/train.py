@@ -61,7 +61,7 @@ def _init_graph(config, with_dataset=False):
 def _cli_train(config, output_dir):
     assert 'train_iter' in config
 
-    with open(os.path.join(output_dir, 'config.yml'), 'w') as f:
+    with open(os.path.join(output_dir, 'config.yaml'), 'w') as f:
         yaml.dump(config, f, default_flow_style=False)
     train(config, config['train_iter'], output_dir)
 

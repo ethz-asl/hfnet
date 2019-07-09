@@ -39,7 +39,7 @@ if __name__ == '__main__':
 
     if exper_name:
         # Update only the model config (not the dataset)
-        with open(Path(EXPER_PATH, exper_name, 'config.yml'), 'r') as f:
+        with open(Path(EXPER_PATH, exper_name, 'config.yaml'), 'r') as f:
             config['model'] = tools.dict_update(
                 yaml.load(f)['model'], config.get('model', {}))
         checkpoint_path = Path(EXPER_PATH, exper_name)
