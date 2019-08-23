@@ -13,7 +13,6 @@ For each dataset, there are separate directories for the images, the SfM models,
 ```
 aachen/
 ├── aachen.db
-├── query.db
 ├── day_time_queries_with_intrinsics.txt
 ├── night_time_queries_with_intrinsics.txt
 ├── databases/
