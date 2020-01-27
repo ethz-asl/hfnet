@@ -135,8 +135,8 @@ Please consider citing the corresponding publication if you use this work in an 
 ```
 @inproceedings{sarlin2019coarse,
   title={From Coarse to Fine: Robust Hierarchical Localization at Large Scale},
-  author={Sarlin, P.-E. and Cadena, C. and Siegwart, R. and Dymczyk, M.},
-  article={CVPR},
+  author={Sarlin, Paul-Edouard and Cadena, Cesar and Siegwart, Roland and Dymczyk, Marcin},
+  booktitle={CVPR},
   year={2019}
 }
 ```
