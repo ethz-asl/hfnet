@@ -88,6 +88,8 @@ def build_localization_dbs(db_ids, images, cameras,
                 pred = config_local['predictor'](
                     data['image'], data['name'], **config)
                 desc = pred['descriptors']
+                if desc.shape[0] != len(valid):
+                    desc = desc[valid]
             elif 'colmap_db' in config_local:
                 cursor = get_cursor(config_local['colmap_db'])
                 if config_local.get('broken_db', False):
