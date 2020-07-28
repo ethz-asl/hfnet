@@ -1,3 +1,9 @@
+<p align="center">
+  <b>
+    ➡️ For state-of-the-art visual localization and SfM, checkout our new toolbox hloc: </br><a href="https://github.com/cvg/Hierarchical-Localization/">cvg/Hierarchical-Localization</a> 🔥
+  </b>
+</p>
+
 # HF-Net: Robust Hierarchical Localization at Large Scale
 
 This repository accompanies our CVPR 2019 paper *[From Coarse to Fine: Robust Hierarchical Localization at Large Scale](https://arxiv.org/abs/1812.03506)*. We introduce a 6-DoF visual localization method that is accurate, scalable, and efficient, using HF-Net, a monolithic deep neural network for descriptor extraction. The proposed solution achieves state-of-the-art accuracy on several large-scale public benchmarks while running in real-time.
