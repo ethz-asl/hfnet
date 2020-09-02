@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+
+<launch>
+    <arg name="bag_file" default="$(find hfnet_ros)/data/sample.bag"/>
+    <node pkg="hfnet_ros" type="hfnet_ros_node" name="hfnet_ros_node" output="screen">
+        <param name="model_dir" 	type="str" value="$(find hfnet_ros)/model/saved_models/hfnet" />
+        <!-- <param name="model_dir" 	type="str"   value="/root/data/hfnet/hfnet_tf/saved_models/hfnet" /> -->
+	<param name="test_image"        value="$(find hfnet_ros)/data/1.png"/>
+	<param name="input_img_topic"	value="/cam0/image_raw"/>
+        <param name="topk_kpts_num"     type="int"   value="2000"/>
+        <param name="nms_radius"        type="int"   value="4"/>
+        <param name="opencv_show_image" type="bool"  value="false"/>
+    </node>
+
+    <node pkg="rosbag" type="play" name="rosbag" args="--clock $(arg bag_file) -l" />
+</launch>
