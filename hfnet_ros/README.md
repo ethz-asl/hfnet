@@ -2,6 +2,8 @@
 
 ![demo](data/hfnet-1660s-demo.gif)
 
+## **9ms in GeForce GTX 2080 Ti**
+
 ## **15-20ms in GeForce GTX 1660s 6G**
 
 Since the origin HF-NET based on Python3, May be it is a little difficult integrate the code with your Cpp projects(some SLAM system). To run the `hfnet_ros` package, you need install the tensorflow from the source. For convience, you can using the docker image here to run this package.
