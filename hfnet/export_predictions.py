@@ -27,7 +27,7 @@ if __name__ == '__main__':
     export_name = args.export_name
     exper_name = args.exper_name
     with open(args.config, 'r') as f:
-        config = yaml.load(f)
+        config = yaml.safe_load(f)
     keys = '*' if args.keys == '*' else args.keys.split(',')
 
     if args.as_dataset:
@@ -41,7 +41,7 @@ if __name__ == '__main__':
         # Update only the model config (not the dataset)
         with open(Path(EXPER_PATH, exper_name, 'config.yaml'), 'r') as f:
             config['model'] = tools.dict_update(
-                yaml.load(f)['model'], config.get('model', {}))
+                yaml.safe_load(f)['model'], config.get('model', {}))
         checkpoint_path = Path(EXPER_PATH, exper_name)
         if config.get('weights', None):
             checkpoint_path = Path(checkpoint_path, config['weights'])
