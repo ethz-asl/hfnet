@@ -1,7 +1,6 @@
 data:
     name: 'distillation'
-    image_dirs: ['google_landmarks/images',
-                 'bdd/dawn_images_vga', 'bdd/night_images_vga']
+    image_dirs: ['self_driving/images/images1', 'self_driving/images/images2']
     shuffle: false
     preprocessing:
         resize: [480, 640]

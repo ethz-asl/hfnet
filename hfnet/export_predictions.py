@@ -1,7 +1,3 @@
-# If you have ROS in your system please uncomment the two lines below
-import sys
-sys.path.remove('/opt/ros/kinetic/lib/python2.7/dist-packages')
-
 import numpy as np
 import argparse
 import yaml
@@ -63,6 +59,7 @@ if __name__ == '__main__':
         if checkpoint_path is not None:
             net.load(str(checkpoint_path))
         dataset = get_dataset(config['data']['name'])(**config['data'])
+        print(dataset)
         test_set = dataset.get_test_set()
 
         for data in tqdm(test_set):
@@ -71,3 +68,4 @@ if __name__ == '__main__':
             name = data['name'].decode('utf-8')
             Path(base_dir, Path(name).parent).mkdir(parents=True, exist_ok=True)
             np.savez(Path(base_dir, '{}.npz'.format(name)), **predictions)
+

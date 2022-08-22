@@ -73,7 +73,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     with open(args.config, 'r') as f:
-        config = yaml.load(f)
+        config = yaml.safe_load(f)
     output_dir = os.path.join(EXPER_PATH, args.exper_name)
     if not os.path.exists(output_dir):
         os.mkdir(output_dir)
