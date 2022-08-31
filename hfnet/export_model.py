@@ -27,7 +27,7 @@ if __name__ == '__main__':
 
     if exper_name:
         assert Path(EXPER_PATH, exper_name).exists()
-        with open(Path(EXPER_PATH, exper_name, 'config.yml'), 'r') as f:
+        with open(Path(EXPER_PATH, exper_name, 'config.yaml'), 'r') as f:
             config['model'] = tools.dict_update(
                 yaml.safe_load(f)['model'], config.get('model', {}))
         checkpoint_path = Path(EXPER_PATH, exper_name)
@@ -43,6 +43,8 @@ if __name__ == '__main__':
             **config['model']) as net:
 
         net.load(str(checkpoint_path))
+        print(net.pred_in)
+        print(net.pred_out)
 
         tf.saved_model.simple_save(
                 net.sess,

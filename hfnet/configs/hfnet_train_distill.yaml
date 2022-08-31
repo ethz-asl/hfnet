@@ -53,6 +53,9 @@ model:
         n_clusters: 32
     local:
         descriptor_dim: 256
+        detector_threshold: 0.005
+        nms_radius: 4
+        num_keypoints: 1000
     #loss_weights: {local_desc: 1, global_desc: 1, detector: 1}
     loss_weights: 'uncertainties'
     train_backbone: true
@@ -61,7 +64,7 @@ model:
     learning_rate: [0.001, 0.0001, 0.00001]
     learning_rate_step: [60000, 80000]
 weights: 'mobilenet_v2_0.75_224/mobilenet_v2_0.75_224.ckpt'
-train_iter: 1800
+train_iter: 1000
 validation_interval: 500
 save_interval: 5000
 keep_checkpoints: 100
