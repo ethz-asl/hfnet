@@ -54,6 +54,9 @@ model:
         n_clusters: 32
     local:
         descriptor_dim: 256
+        detector_threshold: 0.005
+        nms_radius: 4
+        num_keypoints: 1000
     #loss_weights: {local_desc: 1, global_desc: 1, detector: 1}
     loss_weights: 'uncertainties'
     train_backbone: true
