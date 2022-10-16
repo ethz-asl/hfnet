@@ -63,8 +63,9 @@ model:
     eval_batch_size: 16
     learning_rate: [0.001, 0.0001, 0.00001]
     learning_rate_step: [60000, 80000]
-weights: 'mobilenet_v2_0.75_224/mobilenet_v2_0.75_224.ckpt'
-train_iter: 1000
-validation_interval: 500
+# weights: 'mobilenet_v2_0.75_224/mobilenet_v2_0.75_224.ckpt'
+weights: 'hf_net_pretrained_weights/model.ckpt-83096'
+train_iter: 1800
+validation_interval: 300
 save_interval: 5000
 keep_checkpoints: 100
