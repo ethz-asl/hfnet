@@ -55,7 +55,7 @@ class Distillation(BaseDataset):
         im_paths = []
         names = []
         for i, image_dir in enumerate(config['image_dirs']):
-            paths = Path(DATA_PATH, image_dir).glob('*.jpg')
+            paths = Path(DATA_PATH, image_dir).glob('*.png')
             paths = sorted([str(p) for p in paths])
             if config['truncate'] is not None:
                 t = config['truncate'][i]

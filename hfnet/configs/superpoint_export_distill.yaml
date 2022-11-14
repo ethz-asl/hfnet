@@ -1,6 +1,6 @@
 data:
     name: 'distillation'
-    image_dirs: ['self_driving/images/images1', 'self_driving/images/images2']
+    image_dirs: ['custom_dataset_road1/images']
     shuffle: false
     preprocessing:
         resize: [480, 640]
