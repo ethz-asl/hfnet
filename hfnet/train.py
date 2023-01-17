@@ -47,6 +47,8 @@ def _init_graph(config, with_dataset=False):
     logging.info('Number of GPUs detected: {}'.format(n_gpus))
 
     dataset = get_dataset(config['data']['name'])(**config['data'])
+    #print(**config['data'])
+    #print(dataset)
     model = get_model(config['model']['name'])(
             data=dataset.get_tf_datasets(), n_gpus=n_gpus, **config['model'])
     model.__enter__()

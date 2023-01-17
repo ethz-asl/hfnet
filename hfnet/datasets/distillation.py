@@ -55,7 +55,10 @@ class Distillation(BaseDataset):
         im_paths = []
         names = []
         for i, image_dir in enumerate(config['image_dirs']):
-            paths = Path(DATA_PATH, image_dir).glob('*.png')
+            if image_dir == 'dataset_full/google_landmarks':
+                paths = Path(DATA_PATH, image_dir).glob('*.jpg')
+            else:
+                paths = Path(DATA_PATH, image_dir).glob('*.png')
             paths = sorted([str(p) for p in paths])
             if config['truncate'] is not None:
                 t = config['truncate'][i]

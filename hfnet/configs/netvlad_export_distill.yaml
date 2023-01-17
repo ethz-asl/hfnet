@@ -1,6 +1,6 @@
 data:
     name: 'distillation'
-    image_dirs: [custom_dataset_road1/images]
+    image_dirs: ['dataset_full/custom_dataset_road_full']
     shuffle: false
     preprocessing:
         resize: [480, 640]

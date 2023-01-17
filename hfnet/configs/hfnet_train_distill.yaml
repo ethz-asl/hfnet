@@ -1,12 +1,13 @@
 data:
     name: 'distillation'
-    image_dirs: ['custom_dataset_road1/images']
+    image_dirs: ['dataset_full/custom_dataset_road_full']
     load_targets: True
     targets:
         - dir: 'global_descriptors'
           keys: ['global_descriptor']
         - dir: 'superpoint_predictions'
           keys: ['local_descriptor_map', 'dense_scores']
+# keys: ['local_descriptor_map', 'dense_scores']
     validation_size: 192
     truncate: [185000, null, null]
     preprocessing:
@@ -63,9 +64,10 @@ model:
     eval_batch_size: 16
     learning_rate: [0.001, 0.0001, 0.00001]
     learning_rate_step: [60000, 80000]
-weights: 'mobilenet_v2_0.75_224/mobilenet_v2_0.75_224.ckpt'
-# weights: 'hf_net_pretrained_weights/model.ckpt-83096'
-train_iter: 15000
+#weights: 'mobilenet_v2_0.75_224/mobilenet_v2_0.75_224.ckpt'
+# weights: 'hfnet_trained_from_scratch_weights/model.ckpt-60001'
+weights: 'hf_net_pretrained_weights/model.ckpt-83096'
+train_iter: 10000
 validation_interval: 500
-save_interval: 5000
+save_interval: 2000
 keep_checkpoints: 100

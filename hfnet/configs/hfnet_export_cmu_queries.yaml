@@ -12,3 +12,5 @@ model:
         detector_threshold: 0.005
         nms_radius: 4
         num_keypoints: 2500
+weights: 'hf_net_pretrained_weights/model.ckpt-83096'
+
