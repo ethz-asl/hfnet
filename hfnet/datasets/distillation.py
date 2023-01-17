@@ -46,16 +46,19 @@ class Distillation(BaseDataset):
         data = {'names': [], 'images': []}
         if config['load_targets']:
             for i, target in enumerate(config['targets']):
-                for im in config['image_dirs']:
-                    assert Path(Path(DATA_PATH, im).parent,
-                                target['dir']).exists()
+                # for im in config['image_dirs']:
+                #    assert Path(Path(DATA_PATH, im).parent,
+                #                target['dir']).exists()
                 data[i] = []
 
         logging.info('Listing image files')
         im_paths = []
         names = []
         for i, image_dir in enumerate(config['image_dirs']):
-            paths = Path(DATA_PATH, image_dir).glob('*.jpg')
+            if image_dir == 'dataset_full/google_landmarks':
+                paths = Path(DATA_PATH, image_dir).glob('*.jpg')
+            else:
+                paths = Path(DATA_PATH, image_dir).glob('*.png')
             paths = sorted([str(p) for p in paths])
             if config['truncate'] is not None:
                 t = config['truncate'][i]
@@ -74,9 +77,10 @@ class Distillation(BaseDataset):
                         Path(im).parent.parent, target['dir'], f'{n}.npz')
                     # target_path = Path(DATA_PATH, target['dir'], f'{n}.npz')
                     ok &= target_path.exists()
+                    # list with target paths
                     target_paths.append(target_path.as_posix())
-                if not ok:
-                    continue
+                # if not ok:
+                #    continue
                 data['images'].append(im)
                 data['names'].append(n)
                 for i, p in enumerate(target_paths):

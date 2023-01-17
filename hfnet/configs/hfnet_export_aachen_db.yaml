@@ -9,3 +9,4 @@ model:
     image_channels: 1
     local:
         detector_threshold: 0.005
+weights: 'hf_net_pretrained_weights/model.ckpt-83096'
