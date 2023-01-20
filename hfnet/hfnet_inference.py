@@ -24,12 +24,13 @@ class HFNet:
         self.outputs = {n: graph.get_tensor_by_name(n+':0')[0] for n in outputs}
         self.nms_radius_op = graph.get_tensor_by_name('pred/simple_nms/radius:0')
         self.num_keypoints_op = graph.get_tensor_by_name('pred/top_k_keypoints/k:0')
-        
-    def inference(self, image, nms_radius=4, num_keypoints=1000):
+        self.scores_op = graph.get_tensor_by_name('pred/top_k_keypoints/k:0')
+
+    def inference(self, image, nms_radius=4, num_keypoints=1000,scores=1000):
         inputs = {
             self.image_ph: image[..., ::-1].astype(np.float),
             self.nms_radius_op: nms_radius,
             self.num_keypoints_op: num_keypoints,
+            self.scores_op: scores
         }
         return self.session.run(self.outputs, feed_dict=inputs)
-
