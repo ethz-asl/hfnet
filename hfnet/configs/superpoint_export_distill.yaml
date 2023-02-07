@@ -1,7 +1,6 @@
 data:
     name: 'distillation'
-    image_dirs: ['google_landmarks/images',
-                 'bdd/dawn_images_vga', 'bdd/night_images_vga']
+    image_dirs: ['dataset_full/custom_dataset_road_full']
     shuffle: false
     preprocessing:
         resize: [480, 640]

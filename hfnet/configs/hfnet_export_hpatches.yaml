@@ -6,3 +6,4 @@ model:
     image_channels: 1
     local:
         detector_threshold: 0.005
+model_path: 'hfnet_vanilla'

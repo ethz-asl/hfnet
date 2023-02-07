@@ -70,6 +70,15 @@ python3 hfnet/export_predictions.py \
 	[--exper_name hfnet] \ # for HF-Net only
 	--keys keypoints,scores,local_descriptors[,global_descriptor]
 ```
+For HF-net in HPatches:
+```bash
+python hfnet/export_predictions_hfnet.py hfnet/configs/hfnet_export_hpatches.yaml hfnetV1_hpatches_predictions --keys global_descriptor,keypoints,local_descriptors --as_dataset
+```
+
+For SuperPoint in HPatches
+```bash
+python3 hfnet/export_predictions.py hfnet/configs/superpoint_export_hpatches.yaml superpoint_hpatches_predictions --keys keypoints,scores,local_descriptors --as_dataset
+```
 
 For NetVLAD:
 ```bash

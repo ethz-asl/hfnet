@@ -27,7 +27,7 @@ if __name__ == '__main__':
     export_name = args.export_name
     exper_name = args.exper_name
     with open(args.config, 'r') as f:
-        config = yaml.load(f)
+        config = yaml.safe_load(f)
     keys = '*' if args.keys == '*' else args.keys.split(',')
 
     if args.as_dataset:
@@ -41,7 +41,7 @@ if __name__ == '__main__':
         # Update only the model config (not the dataset)
         with open(Path(EXPER_PATH, exper_name, 'config.yaml'), 'r') as f:
             config['model'] = tools.dict_update(
-                yaml.load(f)['model'], config.get('model', {}))
+                yaml.safe_load(f)['model'], config.get('model', {}))
         checkpoint_path = Path(EXPER_PATH, exper_name)
         if config.get('weights', None):
             checkpoint_path = Path(checkpoint_path, config['weights'])
@@ -59,6 +59,7 @@ if __name__ == '__main__':
         if checkpoint_path is not None:
             net.load(str(checkpoint_path))
         dataset = get_dataset(config['data']['name'])(**config['data'])
+        print(dataset)
         test_set = dataset.get_test_set()
 
         for data in tqdm(test_set):
@@ -67,3 +68,4 @@ if __name__ == '__main__':
             name = data['name'].decode('utf-8')
             Path(base_dir, Path(name).parent).mkdir(parents=True, exist_ok=True)
             np.savez(Path(base_dir, '{}.npz'.format(name)), **predictions)
+

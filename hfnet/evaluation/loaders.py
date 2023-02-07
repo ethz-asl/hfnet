@@ -124,3 +124,67 @@ def export_loader(image, name, experiment, **config):
     if binarize:
         pred['descriptors'] = pred['descriptors'] > 0
     return pred
+
+def export_loader_hfnet(image, name, experiment, **config):
+    has_keypoints = config.get('has_keypoints', True)
+    has_descriptors = config.get('has_descriptors', True)
+
+    num_features = config.get('num_features', 0)
+    remove_borders = config.get('remove_borders', 0)
+    keypoint_predictor = config.get('keypoint_predictor', None)
+    do_nms = config.get('do_nms', False)
+    nms_thresh = config.get('nms_thresh', 4)
+    keypoint_refinement = config.get('keypoint_refinement', False)
+    binarize = config.get('binarize', False)
+    # entries = ['keypoints', 'scores', 'global_descriptor', 'local_descriptors']
+    entries = ['keypoints', 'global_descriptor', 'local_descriptors']
+
+    name = name.decode('utf-8') if isinstance(name, bytes) else name
+    path = Path(EXPER_PATH, 'exports', experiment, name+'.npz')
+    with np.load(path) as p:
+        pred = {k: v.copy() for k, v in p.items()}
+    image_shape = image.shape[:2]
+    if keypoint_predictor:
+        keypoint_config = config.get('keypoint_config', config)
+        keypoint_config['keypoint_predictor'] = None
+        pred_detector = keypoint_predictor(
+            image, name, **{'experiment': experiment, **keypoint_config})
+        pred['keypoints'] = pred_detector['keypoints']
+        # pred['scores'] = pred_detector['scores']
+    elif has_keypoints:
+        assert 'keypoints' in pred
+        if remove_borders:
+            mask = keypoints_filter_borders(
+                pred['keypoints'], image_shape, remove_borders)
+            pred = {**pred,
+                    **{k: v[mask] for k, v in pred.items() if k in entries}}
+        if do_nms:
+            keep = nms_fast(
+                # pred['keypoints'], pred['scores'], image_shape, nms_thresh)
+                pred['keypoints'], image_shape, nms_thresh)
+            pred = {**pred,
+                    **{k: v[keep] for k, v in pred.items() if k in entries}}
+        if keypoint_refinement:
+            criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER,
+                        30, 0.001)
+            pred['keypoints'] = cv2.cornerSubPix(
+                image, np.float32(pred['keypoints']),
+                (3, 3), (-1, -1), criteria)
+    #if num_features:
+        #keep = np.argsort(pred['scores'])[::-1][:num_features]
+        #pred = {**pred,
+        #       **{k: v[keep] for k, v in pred.items() if k in entries}}
+    if has_descriptors:
+        if 'global_descriptor' in pred:
+            pass
+        elif 'local_descriptors' in pred:
+            pred['descriptors'] = pred['local_descriptors']
+        else:
+            assert 'local_descriptor_map' in pred
+            pred['descriptors'] = sample_descriptors(
+                pred['local_descriptor_map'], pred['keypoints'], image_shape,
+                input_shape=pred['input_shape'][:2] if 'input_shape' in pred
+                else None)
+    if binarize:
+        pred['descriptors'] = pred['descriptors'] > 0
+    return pred

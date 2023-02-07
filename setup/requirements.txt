@@ -1,5 +1,5 @@
-tensorflow-gpu==1.12
-torch==0.4.1
+# tensorflow-gpu==1.12
+torch==1.0.0
 numpy
 scipy
 opencv-python
